@@ -1,0 +1,274 @@
+<a routerLink="/machines" class="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-teal-600">
+  Retour a la liste
+</a>
+
+<div class="mx-auto max-w-4xl space-y-6">
+  <div class="page-heading">
+    <div>
+      <p class="muted-label">Machine List</p>
+      <h2 class="page-title">{{ isEdit ? 'Modifier une machine' : 'Ajouter une machine' }}</h2>
+      <p class="page-subtitle">Identite, localisation, donnees techniques et etat initial.</p>
+    </div>
+  </div>
+
+  <form (ngSubmit)="onSubmit()" class="space-y-6">
+    <section class="surface-panel p-6">
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Identite</h3>
+      <div class="mt-4 grid gap-4 md:grid-cols-2">
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Nom *</span>
+          <input class="form-control" type="text" [(ngModel)]="nom" name="nom" placeholder="Machine 01" />
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Reference *</span>
+          <input class="form-control" type="text" [(ngModel)]="ref" name="ref" placeholder="MCH-001" />
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Fabricant</span>
+          <input class="form-control" type="text" [(ngModel)]="fabricant" name="fabricant" placeholder="Siemens, ABB..." />
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Modele</span>
+          <input class="form-control" type="text" [(ngModel)]="modele" name="modele" placeholder="Modele machine" />
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Numero de serie</span>
+          <input class="form-control" type="text" [(ngModel)]="numeroSerie" name="numeroSerie" placeholder="SN-..." />
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Emplacement</span>
+          <input class="form-control" type="text" [(ngModel)]="emplacement" name="emplacement" placeholder="Atelier, ligne, zone..." />
+        </label>
+      </div>
+    </section>
+
+    <section class="surface-panel p-6">
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Donnees techniques</h3>
+      <div class="mt-4 grid gap-4 md:grid-cols-3">
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Date installation</span>
+          <input class="form-control" type="date" [(ngModel)]="dateInstallation" name="dateInstallation" />
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Criticite</span>
+          <select class="form-control" [(ngModel)]="criticite" name="criticite">
+            <option value="FAIBLE">Faible</option>
+            <option value="NORMALE">Normale</option>
+            <option value="HAUTE">Haute</option>
+            <option value="CRITIQUE">Critique</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Heures de marche</span>
+          <input class="form-control" type="number" min="0" step="0.1" [(ngModel)]="heuresMarche" name="heuresMarche" placeholder="0" />
+        </label>
+      </div>
+      <label class="mt-4 block">
+        <span class="mb-1 block text-sm font-medium text-slate-600">Commentaire technique</span>
+        <textarea class="form-control" rows="3" [(ngModel)]="commentaireTechnique" name="commentaireTechnique" placeholder="Capacite, contraintes, observations..."></textarea>
+      </label>
+    </section>
+
+    <section class="surface-panel p-6">
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Couts machine</h3>
+      <p class="mt-1 text-sm text-slate-500">
+        Ces montants servent a comparer le cout de maintenance avec l'investissement de la machine.
+      </p>
+      <div class="mt-4 grid gap-4 md:grid-cols-3">
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Cout d'achat</span>
+          <input class="form-control" type="number" min="0" step="0.01" [(ngModel)]="coutAchat" name="coutAchat" placeholder="0.00" />
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Cout d'installation</span>
+          <input class="form-control" type="number" min="0" step="0.01" [(ngModel)]="coutInstallation" name="coutInstallation" placeholder="0.00" />
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Transport / livraison</span>
+          <input class="form-control" type="number" min="0" step="0.01" [(ngModel)]="coutTransport" name="coutTransport" placeholder="0.00" />
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Formation operateurs</span>
+          <input class="form-control" type="number" min="0" step="0.01" [(ngModel)]="coutFormation" name="coutFormation" placeholder="0.00" />
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Mise en service</span>
+          <input class="form-control" type="number" min="0" step="0.01" [(ngModel)]="coutMiseEnService" name="coutMiseEnService" placeholder="0.00" />
+        </label>
+        <div class="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+          <p class="font-semibold">Investissement total</p>
+          <p class="mt-1 font-mono text-lg">{{ totalInvestissement() | number:'1.2-2' }} DH</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="surface-panel p-6">
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Seuils d'alerte par machine</h3>
+      <p class="mt-1 text-sm text-slate-500">
+        Ces valeurs pilotent les alertes, les recommandations preventives et l'analyse de remplacement pour cette machine.
+      </p>
+
+      <div class="mt-4 grid gap-4 md:grid-cols-2">
+        <div class="rounded-md border border-slate-200 bg-slate-50 p-4">
+          <h4 class="font-semibold text-slate-900">Disponibilite</h4>
+          <p class="mt-1 text-xs text-slate-500">Alerte si le pourcentage de disponibilite descend sous ces valeurs.</p>
+          <div class="mt-3 grid gap-3 sm:grid-cols-2">
+            <label class="block">
+              <span class="mb-1 block text-sm font-medium text-slate-600">Seuil attention (%)</span>
+              <input class="form-control" type="number" min="0" max="100" step="0.1" [(ngModel)]="seuilDisponibiliteAttentionPercent" name="seuilDisponibiliteAttentionPercent" />
+            </label>
+            <label class="block">
+              <span class="mb-1 block text-sm font-medium text-slate-600">Seuil critique (%)</span>
+              <input class="form-control" type="number" min="0" max="100" step="0.1" [(ngModel)]="seuilDisponibiliteCritiquePercent" name="seuilDisponibiliteCritiquePercent" />
+            </label>
+          </div>
+        </div>
+
+        <div class="rounded-md border border-slate-200 bg-slate-50 p-4">
+          <h4 class="font-semibold text-slate-900">Temps d'arret</h4>
+          <p class="mt-1 text-xs text-slate-500">Alerte quand une machine reste arretee trop longtemps.</p>
+          <div class="mt-3 grid gap-3 sm:grid-cols-2">
+            <label class="block">
+              <span class="mb-1 block text-sm font-medium text-slate-600">Attention (minutes)</span>
+              <input class="form-control" type="number" min="0" step="1" [(ngModel)]="seuilTempsArretAttentionMinutes" name="seuilTempsArretAttentionMinutes" />
+            </label>
+            <label class="block">
+              <span class="mb-1 block text-sm font-medium text-slate-600">Critique (minutes)</span>
+              <input class="form-control" type="number" min="0" step="1" [(ngModel)]="seuilTempsArretCritiqueMinutes" name="seuilTempsArretCritiqueMinutes" />
+            </label>
+          </div>
+        </div>
+
+        <div class="rounded-md border border-slate-200 bg-slate-50 p-4">
+          <h4 class="font-semibold text-slate-900">Pannes</h4>
+          <p class="mt-1 text-xs text-slate-500">Nombre de pannes a partir duquel la machine devient a surveiller.</p>
+          <div class="mt-3 grid gap-3 sm:grid-cols-2">
+            <label class="block">
+              <span class="mb-1 block text-sm font-medium text-slate-600">Attention (pannes)</span>
+              <input class="form-control" type="number" min="0" step="1" [(ngModel)]="seuilPannesAttention" name="seuilPannesAttention" />
+            </label>
+            <label class="block">
+              <span class="mb-1 block text-sm font-medium text-slate-600">Critique (pannes)</span>
+              <input class="form-control" type="number" min="0" step="1" [(ngModel)]="seuilPannesCritique" name="seuilPannesCritique" />
+            </label>
+          </div>
+        </div>
+
+        <div class="rounded-md border border-slate-200 bg-slate-50 p-4">
+          <h4 class="font-semibold text-slate-900">Temps moyen de reparation</h4>
+          <p class="mt-1 text-xs text-slate-500">Alerte si la duree moyenne de reparation depasse ces valeurs.</p>
+          <div class="mt-3 grid gap-3 sm:grid-cols-2">
+            <label class="block">
+              <span class="mb-1 block text-sm font-medium text-slate-600">Attention (heures)</span>
+              <input class="form-control" type="number" min="0" step="0.1" [(ngModel)]="seuilTempsReparationAttentionHours" name="seuilTempsReparationAttentionHours" />
+            </label>
+            <label class="block">
+              <span class="mb-1 block text-sm font-medium text-slate-600">Critique (heures)</span>
+              <input class="form-control" type="number" min="0" step="0.1" [(ngModel)]="seuilTempsReparationCritiqueHours" name="seuilTempsReparationCritiqueHours" />
+            </label>
+          </div>
+        </div>
+
+        <div class="rounded-md border border-slate-200 bg-slate-50 p-4 md:col-span-2">
+          <h4 class="font-semibold text-slate-900">Remplacement machine</h4>
+          <p class="mt-1 text-xs text-slate-500">Comparaison du cout maintenance cumule avec l'investissement total de la machine.</p>
+          <div class="mt-3 grid gap-3 md:grid-cols-3">
+            <label class="block">
+              <span class="mb-1 block text-sm font-medium text-slate-600">Surveillance (%)</span>
+              <input class="form-control" type="number" min="0" step="0.1" [(ngModel)]="seuilRemplacementSurveillancePercent" name="seuilRemplacementSurveillancePercent" />
+            </label>
+            <label class="block">
+              <span class="mb-1 block text-sm font-medium text-slate-600">Etude remplacement (%)</span>
+              <input class="form-control" type="number" min="0" step="0.1" [(ngModel)]="seuilRemplacementAttentionPercent" name="seuilRemplacementAttentionPercent" />
+            </label>
+            <label class="block">
+              <span class="mb-1 block text-sm font-medium text-slate-600">Critique (%)</span>
+              <input class="form-control" type="number" min="0" step="0.1" [(ngModel)]="seuilRemplacementCritiquePercent" name="seuilRemplacementCritiquePercent" />
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="surface-panel p-6">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Controle periodique</h3>
+          <p class="mt-1 text-sm text-slate-500">
+            Programmer un suivi automatique de cette machine.
+          </p>
+        </div>
+        <label class="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+          <input type="checkbox" [(ngModel)]="createControlePeriodique" name="createControlePeriodique" />
+          Activer
+        </label>
+      </div>
+
+      <div *ngIf="createControlePeriodique" class="mt-4 grid gap-4 md:grid-cols-2">
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Type de controle *</span>
+          <select class="form-control" [(ngModel)]="controleTypeMaintenanceId" name="controleTypeMaintenanceId">
+            <option [ngValue]="undefined">Choisir le type</option>
+            <option *ngFor="let type of typeMaintenances" [ngValue]="type.id">
+              {{ type.libelle || type.code }}
+            </option>
+          </select>
+        </label>
+
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Commencer le *</span>
+          <input class="form-control" type="date" [(ngModel)]="controleDateDebut" name="controleDateDebut" />
+        </label>
+
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Tous les *</span>
+          <input class="form-control" type="number" min="1" [(ngModel)]="controleFrequence" name="controleFrequence" placeholder="1" />
+        </label>
+
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Periode *</span>
+          <select class="form-control" [(ngModel)]="controleUnite" name="controleUnite">
+            <option *ngFor="let unit of controleUnits" [ngValue]="unit">{{ unitLabel(unit) }}</option>
+          </select>
+        </label>
+
+        <div class="rounded-md border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-800 md:col-span-2">
+          Exemple: creer une demande de controle tous les {{ controleFrequence || 1 }} {{ unitLabel(controleUnite) }}.
+        </div>
+
+        <label class="block md:col-span-2">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Description du controle</span>
+          <textarea class="form-control" rows="3" [(ngModel)]="controleDescription" name="controleDescription" placeholder="Ex: verifier pression, nettoyage filtre, controle securite..."></textarea>
+        </label>
+      </div>
+    </section>
+
+    <section class="surface-panel p-6">
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Etat et image</h3>
+      <div class="mt-4 grid gap-4 md:grid-cols-2">
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Etat initial *</span>
+          <select class="form-control" [(ngModel)]="typeActionId" name="typeActionId">
+            <option [ngValue]="null" disabled>Choisir un etat</option>
+            <option *ngFor="let t of types" [ngValue]="t.id">{{ t.libelle }} ({{ t.code }})</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Image</span>
+          <input type="file" (change)="onFileChange($event)" class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-teal-700 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white" />
+        </label>
+      </div>
+    </section>
+
+    <div *ngIf="errorMessage" class="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+      {{ errorMessage }}
+    </div>
+
+    <div class="flex items-center justify-end gap-3">
+      <button type="button" class="secondary-action" routerLink="/machines">Annuler</button>
+      <button type="submit" [disabled]="loading" class="primary-action">
+        {{ loading ? 'En cours...' : (isEdit ? 'Enregistrer' : 'Creer') }}
+      </button>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,24 @@
+# Java / Maven
+target/
+
+# Editeurs
+.idea/
+*.iml
+.vscode/
+
+# Node / Angular
+node_modules/
+.angular/
+dist/
+
+# Python
+__pycache__/
+.venv/
+
+# Fichiers envoyes pendant l'utilisation
+CANALMADASH/uploads/*
+!CANALMADASH/uploads/.gitkeep
+
+# Secrets
+.env
+*.env

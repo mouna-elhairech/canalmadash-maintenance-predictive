@@ -1,0 +1,79 @@
+<ion-content fullscreen>
+  <div class="mobile-page">
+    <div class="mobile-container">
+      <header class="mobile-topbar">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-xs font-semibold uppercase text-blue-700">Operateur</p>
+            <h1 class="mobile-title mt-1">Machines</h1>
+            <p class="mt-1 text-sm text-slate-500">Changer un etat ou demander une maintenance.</p>
+          </div>
+        <button
+          type="button"
+          (click)="loadMachines()"
+          class="mobile-secondary"
+        >
+          <ion-icon name="refresh-outline" class="mr-1"></ion-icon>
+          Actualiser
+        </button>
+        </div>
+      </header>
+
+      <div class="mobile-card">
+        <div class="flex items-center justify-between">
+          <p class="flex items-center gap-2 text-sm font-medium text-blue-700">
+            <ion-icon name="hardware-chip-outline"></ion-icon>
+            Machines disponibles
+          </p>
+          <p class="text-3xl font-bold">{{ machines.length }}</p>
+        </div>
+        <input
+          [(ngModel)]="searchTerm"
+          type="search"
+          class="mobile-input mt-4"
+          placeholder="Rechercher machine, reference, etat"
+        />
+      </div>
+
+      <div *ngIf="loading" class="flex justify-center py-10">
+        <ion-spinner name="crescent"></ion-spinner>
+      </div>
+
+      <div class="space-y-3" *ngIf="!loading">
+        <button
+          *ngFor="let m of filteredMachines"
+          type="button"
+          class="mobile-card w-full text-left active:scale-[0.99]"
+          [routerLink]="['/machines-operateur', m.id]"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex min-w-0 items-start gap-3">
+              <span class="mobile-icon">
+                <ion-icon name="cube-outline"></ion-icon>
+              </span>
+              <div class="min-w-0">
+              <p class="truncate text-base font-semibold text-slate-950">{{ m.nom }}</p>
+              <p class="mt-1 font-mono text-xs text-slate-500">{{ m.ref }}</p>
+              </div>
+            </div>
+            <span
+              class="inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold"
+              [ngStyle]="getEtatColorStyle(m)"
+            >
+              <span class="h-2 w-2 rounded-full" [style.backgroundColor]="m.typeAction?.color || '#64748b'"></span>
+              {{ getEtatLabel(m) }}
+            </span>
+          </div>
+
+          <p class="mt-4 text-xs text-slate-500" *ngIf="m.dateDebutAction">
+            Etat depuis {{ m.dateDebutAction | date:'dd/MM/yyyy HH:mm' }}
+          </p>
+        </button>
+
+        <div *ngIf="filteredMachines.length === 0" class="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
+          Aucune machine trouvee.
+        </div>
+      </div>
+    </div>
+  </div>
+</ion-content>

@@ -1,0 +1,152 @@
+<div class="space-y-6">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <p class="muted-label">
+        Machine List
+      </p>
+      <h2 class="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
+        Supervision machines
+      </h2>
+      <p class="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
+        Etats actuels, temps dans l'etat et acces rapide aux historiques.
+      </p>
+    </div>
+
+    <button *ngIf="auth.peutFaire('MACHINE_CREER_MODIFIER_SUPPRIMER')"
+      routerLink="/machines/new"
+      class="primary-action"
+    >
+      Ajouter une machine
+    </button>
+  </div>
+
+  <div class="grid gap-4 md:grid-cols-4">
+    <div class="surface-panel p-5">
+      <p class="text-sm text-slate-500 dark:text-slate-400">Machines suivies</p>
+      <p class="mt-3 text-3xl font-bold text-slate-950 dark:text-white">{{ machines.length }}</p>
+    </div>
+
+    <div
+      *ngFor="let s of stats | slice:0:3"
+      class="surface-panel p-5"
+    >
+      <div class="flex items-center justify-between gap-3">
+        <p class="truncate text-sm text-slate-500 dark:text-slate-400">{{ s.label }}</p>
+        <span class="h-3 w-3 rounded-full" [style.backgroundColor]="s.color"></span>
+      </div>
+      <div class="mt-3 flex items-end justify-between gap-3">
+        <p class="text-3xl font-bold text-slate-950 dark:text-white">{{ s.count }}</p>
+        <p class="font-mono text-sm text-slate-500 dark:text-slate-400">{{ s.percentage | number:'1.0-0' }}%</p>
+      </div>
+    </div>
+  </div>
+
+  <section class="surface-panel overflow-hidden">
+    <div class="flex flex-col gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800 md:flex-row md:items-center md:justify-between">
+      <div>
+        <h3 class="text-base font-semibold text-slate-950 dark:text-white">Liste des machines</h3>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Mise a jour automatique toutes les 15 secondes.</p>
+      </div>
+
+      <button
+        type="button"
+        (click)="loadMachines()"
+        class="secondary-action"
+      >
+        Actualiser
+      </button>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-950/60 dark:text-slate-400">
+        <tr>
+          <th class="px-5 py-3">Machine</th>
+          <th class="px-5 py-3">Reference</th>
+          <th class="px-5 py-3">Etat actuel</th>
+          <th class="px-5 py-3">Depuis</th>
+          <th class="px-5 py-3 text-right">Actions</th>
+        </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+        <tr
+          *ngFor="let machine of machines"
+          class="transition hover:bg-slate-50 dark:hover:bg-slate-800/60"
+        >
+          <td class="px-5 py-4">
+            <div class="flex items-center gap-3">
+              <div class="h-12 w-12 overflow-hidden rounded-md border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800">
+                <img [src]="getImage(machine)" alt="Machine" class="h-full w-full object-cover" />
+              </div>
+              <div>
+                <a
+                  [routerLink]="['/machinesD', machine.id]"
+                  class="font-semibold text-slate-950 hover:text-primary-600 dark:text-white dark:hover:text-primary-300"
+                >
+                  {{ machine.nom }}
+                </a>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">ID #{{ machine.id }}</p>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" *ngIf="machine.emplacement">{{ machine.emplacement }}</p>
+              </div>
+            </div>
+          </td>
+
+          <td class="px-5 py-4 font-mono text-slate-700 dark:text-slate-300">
+            {{ machine.ref }}
+            <p class="mt-1 font-sans text-xs text-slate-500" *ngIf="machine.criticite">Criticite: {{ machine.criticite }}</p>
+          </td>
+
+          <td class="px-5 py-4">
+            <span
+              class="inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-xs font-semibold"
+              [ngStyle]="getTypeBadgeStyle(machine)"
+            >
+              <span class="h-2 w-2 rounded-full" [ngStyle]="getDotStyle(machine)"></span>
+              {{ getTypeLabel(machine) }}
+            </span>
+          </td>
+
+          <td class="px-5 py-4">
+            <p class="font-mono text-slate-950 dark:text-white">{{ getElapsedForMachine(machine) }}</p>
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              {{ machine.dateDebutAction | date:'dd/MM/yyyy HH:mm' }}
+            </p>
+          </td>
+
+          <td class="px-5 py-4">
+            <div class="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                [routerLink]="['/machinesD', machine.id]"
+                class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Detail
+              </button>
+              <button *ngIf="auth.peutFaire('MACHINE_CREER_MODIFIER_SUPPRIMER')"
+                type="button"
+                [routerLink]="['/machines', machine.id, 'edit']"
+                class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Modifier
+              </button>
+              <button *ngIf="auth.peutFaire('MACHINE_CREER_MODIFIER_SUPPRIMER')"
+                type="button"
+                class="rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-900/70 dark:text-red-200 dark:hover:bg-red-950/40"
+                (click)="onDelete(machine.id, $event)"
+              >
+                Supprimer
+              </button>
+            </div>
+          </td>
+        </tr>
+
+        <tr *ngIf="machines.length === 0">
+          <td colspan="5" class="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400">
+            Aucune machine enregistree.
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

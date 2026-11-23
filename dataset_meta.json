@@ -1,0 +1,41 @@
+{
+  "historique": [
+    "age_mois",
+    "jours_depuis_maintenance",
+    "retard_maintenance_ratio",
+    "pannes_30j",
+    "pannes_90j",
+    "jours_depuis_derniere_panne",
+    "eq_cafe",
+    "eq_moulin",
+    "eq_chambre",
+    "eq_vitrine",
+    "eq_glacons",
+    "eq_lavevaisselle",
+    "eq_four",
+    "eq_friteuse",
+    "eq_clim",
+    "eq_adoucisseur",
+    "eq_jus",
+    "eq_blender"
+  ],
+  "contexte": [
+    "amb_7j",
+    "intensite_7j",
+    "durete_7j"
+  ],
+  "capteurs": [
+    "z_temp",
+    "z_vib",
+    "z_pres",
+    "z_cycle",
+    "pente_temp",
+    "pente_vib",
+    "pente_pres",
+    "pente_cycle",
+    "bruit_7j"
+  ],
+  "cible": "panne_7j",
+  "warmup_jours": 90,
+  "horizon_jours": 7
+}

@@ -1,0 +1,199 @@
+<div class="space-y-6">
+  <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div>
+      <p class="muted-label">Pilotage maintenance</p>
+      <h2 class="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">Kanban et preventif</h2>
+      <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">Demandes, filtres avances et controles periodiques.</p>
+    </div>
+    <button *ngIf="auth.peutFaire('CONTROLE_PERIODIQUE_GERER')" type="button" class="primary-action" (click)="generatePreventive()">Generer controles periodiques</button>
+  </div>
+
+  <div *ngIf="generatedMessage" class="rounded-md border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+    {{ generatedMessage }}
+  </div>
+
+  <section class="surface-panel p-5">
+    <div class="grid gap-3 md:grid-cols-4 xl:grid-cols-8">
+      <label class="block">
+        <span class="mb-1 block text-xs font-semibold text-slate-500">Machine</span>
+        <select class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" [(ngModel)]="filters.machineId">
+          <option [ngValue]="undefined">Toutes machines</option>
+          <option *ngFor="let m of machines" [ngValue]="m.id">{{ m.nom }}</option>
+        </select>
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-xs font-semibold text-slate-500">Statut demande</span>
+        <select class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" [(ngModel)]="filters.statut">
+          <option [ngValue]="undefined">Tous statuts</option>
+          <option *ngFor="let s of statuses" [ngValue]="s">{{ label(s) }}</option>
+        </select>
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-xs font-semibold text-slate-500">Priorite</span>
+        <select class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" [(ngModel)]="filters.priorite">
+          <option [ngValue]="undefined">Toutes priorites</option>
+          <option *ngFor="let p of priorities" [ngValue]="p">{{ label(p) }}</option>
+        </select>
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-xs font-semibold text-slate-500">Type maintenance</span>
+        <select class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" [(ngModel)]="filters.typeMaintenanceId">
+          <option [ngValue]="undefined">Tous types</option>
+          <option *ngFor="let t of typeMaintenances" [ngValue]="t.id">{{ t.libelle || t.code }}</option>
+        </select>
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-xs font-semibold text-slate-500">Date debut</span>
+        <input type="date" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" [(ngModel)]="filters.from" />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-xs font-semibold text-slate-500">Date fin</span>
+        <input type="date" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" [(ngModel)]="filters.to" />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-xs font-semibold text-slate-500">Retard</span>
+        <select class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" [(ngModel)]="filters.retard">
+          <option [ngValue]="undefined">Tous</option>
+          <option [ngValue]="true">En retard</option>
+          <option [ngValue]="false">Pas en retard</option>
+        </select>
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-xs font-semibold text-slate-500">Cout minimum</span>
+        <input type="number" min="0" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="0" [(ngModel)]="filters.coutMin" />
+      </label>
+    </div>
+    <div class="mt-4 flex gap-2">
+      <button type="button" class="primary-action" (click)="search()">Rechercher</button>
+      <button type="button" class="secondary-action" (click)="resetFilters()">Reinitialiser</button>
+    </div>
+  </section>
+
+  <section class="grid gap-4 xl:grid-cols-6">
+    <div
+      *ngFor="let status of statuses"
+      class="surface-panel min-h-[320px] p-4 transition"
+      [ngClass]="isDropTarget(status) ? 'border-orange-300 bg-orange-50/60 ring-2 ring-orange-200 dark:bg-orange-950/20' : ''"
+      (dragover)="onDragOver($event, status)"
+      (dragleave)="onDragLeave(status)"
+      (drop)="onDrop($event, status)"
+    >
+      <div class="mb-3 flex items-center justify-between">
+        <h3 class="flex items-center gap-2 text-sm font-semibold uppercase text-blue-800 dark:text-blue-200">
+          <span class="app-icon app-icon-blue h-7 w-7">{{ label(status).slice(0, 1).toUpperCase() }}</span>
+          {{ label(status) }}
+        </h3>
+        <span class="rounded-md bg-orange-100 px-2 py-1 text-xs font-semibold text-orange-700">{{ byStatus(status).length }}</span>
+      </div>
+      <div class="min-h-[240px] space-y-3 rounded-md border border-dashed border-blue-100 p-2 dark:border-slate-800">
+        <div
+          *ngFor="let d of byStatus(status)"
+          class="cursor-grab rounded-md border border-blue-100 bg-white p-3 text-sm shadow-sm transition active:cursor-grabbing dark:border-slate-800 dark:bg-slate-950"
+          [class.opacity-50]="isDragging(d) || updatingDemandeId === d.id"
+          [class.ring-2]="updatingDemandeId === d.id"
+          [class.ring-orange-200]="updatingDemandeId === d.id"
+          [draggable]="auth.peutFaire('DEMANDE_PILOTER')"
+          (dragstart)="onDragStart($event, d)"
+          (dragend)="onDragEnd()"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="font-semibold text-slate-950 dark:text-white">{{ d.typeMaintenance?.libelle || d.typeMaintenance?.code || 'Maintenance' }}</p>
+              <p class="mt-1 text-xs text-slate-500">{{ d.dateDemande | date:'dd/MM/yyyy HH:mm' }}</p>
+            </div>
+            <span class="rounded-md px-2 py-1 text-xs font-semibold" [class.bg-red-50]="isLate(d)" [class.text-red-700]="isLate(d)" [class.bg-slate-100]="!isLate(d)">
+              {{ d.priorite || 'NORMALE' }}
+            </span>
+          </div>
+          <p class="mt-2 line-clamp-2 text-slate-600 dark:text-slate-300">{{ d.description }}</p>
+          <p *ngIf="d.dateSouhaitee" class="mt-2 text-xs" [class.text-red-600]="isLate(d)" [class.text-slate-500]="!isLate(d)">
+            Planifiee: {{ d.dateSouhaitee | date:'dd/MM/yyyy HH:mm' }}
+          </p>
+          <div class="mt-3 flex items-center justify-between gap-2 text-xs text-slate-400">
+            <span>Glisser-deposer</span>
+            <span *ngIf="updatingDemandeId === d.id" class="font-semibold text-orange-700">Mise a jour...</span>
+          </div>
+          <select class="mt-2 w-full rounded-md border border-blue-200 px-2 py-1 text-xs" [ngModel]="d.statut" (ngModelChange)="updateStatus(d, $event)">
+            <option *ngFor="let s of statuses" [ngValue]="s">{{ label(s) }}</option>
+          </select>
+        </div>
+        <div
+          *ngIf="byStatus(status).length === 0"
+          class="flex min-h-28 items-center justify-center rounded-md border border-dashed border-blue-200 bg-blue-50/50 px-3 text-center text-xs font-semibold text-blue-500 dark:border-slate-800 dark:bg-slate-900/40"
+        >
+          Deposer une demande ici
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section *ngIf="auth.peutFaire('CONTROLE_PERIODIQUE_GERER')" class="surface-panel p-5">
+    <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Controle periodique des machines</h3>
+    <p class="mt-1 text-sm text-slate-500">Un controle periodique cree une seule demande ouverte. Tant que la demande precedente n'est pas terminee ou annulee, aucune nouvelle demande n'est creee.</p>
+    <div class="mt-4 grid gap-3 md:grid-cols-6">
+      <label class="block">
+        <span class="mb-1 block text-xs font-semibold text-slate-500">Machine a suivre</span>
+        <select class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" [(ngModel)]="newRule.machineId">
+          <option [ngValue]="undefined">Choisir machine</option>
+          <option *ngFor="let m of machines" [ngValue]="m.id">{{ m.nom }}</option>
+        </select>
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-xs font-semibold text-slate-500">Type de controle</span>
+        <select class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" [(ngModel)]="newRule.typeMaintenanceId">
+          <option [ngValue]="undefined">Choisir type</option>
+          <option *ngFor="let t of typeMaintenances" [ngValue]="t.id">{{ t.libelle || t.code }}</option>
+        </select>
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-xs font-semibold text-slate-500">Tous les</span>
+        <input type="number" min="1" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" [(ngModel)]="newRule.frequence" placeholder="1" />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-xs font-semibold text-slate-500">Periode</span>
+        <select class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" [(ngModel)]="newRule.unite">
+          <option *ngFor="let unit of periodicUnits" [ngValue]="unit">{{ label(unit) }}</option>
+        </select>
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-xs font-semibold text-slate-500">Date de debut</span>
+        <input type="date" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" [(ngModel)]="newRule.dateDebut" />
+      </label>
+      <button type="button" class="primary-action" (click)="createRule()">Ajouter controle</button>
+    </div>
+    <div class="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+      Exemple: chaque {{ newRule.frequence || 1 }} {{ label(newRule.unite) }}
+    </div>
+    <label class="mt-3 block">
+      <span class="mb-1 block text-xs font-semibold text-slate-500">Description du controle</span>
+      <input class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="Ex: verifier pression, filtre, securite..." [(ngModel)]="newRule.description" />
+    </label>
+
+    <div class="mt-5 overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="text-left text-xs uppercase text-slate-500">
+        <tr>
+          <th class="px-3 py-2">Machine</th>
+          <th class="px-3 py-2">Type</th>
+          <th class="px-3 py-2">Frequence</th>
+          <th class="px-3 py-2">Prochaine date</th>
+          <th class="px-3 py-2">Derniere generation</th>
+          <th class="px-3 py-2 text-right">Action</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngFor="let r of regles" class="border-t border-slate-100">
+          <td class="px-3 py-2">{{ r.machine.nom }}</td>
+          <td class="px-3 py-2">{{ r.typeMaintenance.libelle || r.typeMaintenance.code }}</td>
+          <td class="px-3 py-2">{{ ruleValueLabel(r) }}</td>
+          <td class="px-3 py-2">{{ r.prochaineDate ? (r.prochaineDate | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
+          <td class="px-3 py-2">{{ r.derniereGeneration ? (r.derniereGeneration | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
+          <td class="px-3 py-2 text-right">
+            <button type="button" class="secondary-action" (click)="disableRule(r.id)">Desactiver</button>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

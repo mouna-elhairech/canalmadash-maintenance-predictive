@@ -1,0 +1,729 @@
+<div class="space-y-6">
+  <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div>
+      <p class="muted-label">Pilotage maintenance</p>
+      <h2 class="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">
+        Indicateurs maintenance
+      </h2>
+      <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">
+        Exploitation des donnees machines, arrets et demandes
+      </p>
+    </div>
+
+    <button
+      type="button"
+      (click)="loadDashboard()"
+      class="secondary-action"
+    >
+      Actualiser
+    </button>
+    <button
+      type="button"
+      (click)="openDashboardExport()"
+      class="secondary-action"
+    >
+      Export dashboard
+    </button>
+    <button
+      type="button"
+      (click)="openDashboardReport()"
+      class="primary-action"
+    >
+      Rapport PDF
+    </button>
+    <div class="flex gap-2">
+      <input type="month" class="rounded-md border border-slate-300 px-3 py-2 text-sm" [(ngModel)]="monthlyReportMonth" />
+      <button type="button" class="secondary-action" (click)="openMonthlyReport()">PDF mensuel</button>
+    </div>
+  </div>
+
+  <div
+    *ngIf="errorMessage"
+    class="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/70 dark:bg-red-950/30 dark:text-red-200"
+  >
+    {{ errorMessage }}
+  </div>
+
+  <div *ngIf="loading" class="text-slate-500 dark:text-slate-400">
+    Chargement des indicateurs...
+  </div>
+
+  <ng-container *ngIf="dashboard && !loading">
+        <!-- ─── CLASSEMENT ML DES EQUIPEMENTS A SURVEILLER ─── -->
+    <section class="surface-panel overflow-hidden">
+      <div class="border-b border-purple-100 px-6 py-4 dark:border-slate-800">
+        <p class="muted-label">Maintenance prédictive</p>
+        <h3 class="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">Équipements à surveiller dans les 7 jours</h3>
+        <p class="mt-1 text-sm text-slate-500">
+          Classement par score de risque du modèle ML (données simulées).
+          Le trait noir marque le seuil d'alerte validé. Ce score n'est pas une probabilité calibrée.
+          <span *ngIf="mlRanking.length">Données au {{ mlRanking[0].as_of }}.</span>
+        </p>
+      </div>
+
+      <div *ngIf="mlRankingLoading" class="px-6 py-4 text-sm text-slate-500">Calcul des prédictions...</div>
+      <div *ngIf="mlRankingError" class="m-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        {{ mlRankingError }}
+      </div>
+
+      <div *ngIf="mlRanking.length" class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
+          <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-950/60 dark:text-slate-400">
+            <tr>
+              <th class="px-5 py-3">#</th>
+              <th class="px-5 py-3">Équipement</th>
+              <th class="px-5 py-3">Score de risque</th>
+              <th class="px-5 py-3">Niveau</th>
+              <th class="px-5 py-3">Facteur principal en hausse</th>
+              <th class="px-5 py-3">Recommandation</th>
+              <th class="px-5 py-3 text-right">Détail</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+            <tr *ngFor="let item of mlRanking; let i = index" class="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+              <td class="px-5 py-3 font-mono text-slate-500">{{ i + 1 }}</td>
+              <td class="px-5 py-3 font-semibold text-slate-950 dark:text-white">{{ item.nom }}</td>
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-3">
+                  <div class="relative h-2 w-40 rounded-full bg-slate-100 dark:bg-slate-800">
+                    <div class="h-2 rounded-full" [style.width.%]="item.probability"
+                         [style.background-color]="mlBarColor(item.risk_level)"></div>
+                    <div class="absolute h-4 bg-slate-900" style="top:-4px; width:2px;"
+                         [style.left.%]="mlSeuilPct()"></div>
+                  </div>
+                  <span class="font-mono text-slate-700 dark:text-slate-300">{{ item.probability }}</span>
+                </div>
+              </td>
+              <td class="px-5 py-3">
+                <span class="rounded-md px-2 py-1 text-xs font-semibold" [ngClass]="mlLevelClass(item.risk_level)">
+                  {{ item.risk_level }}
+                </span>
+              </td>
+              <td class="px-5 py-3 text-slate-600 dark:text-slate-300">{{ mainRiskFactor(item) }}</td>
+              <td class="px-5 py-3 text-slate-600 dark:text-slate-300">{{ item.recommendation }}</td>
+              <td class="px-5 py-3 text-right">
+                <a [routerLink]="['/machinesD', item.machine_id]"
+                   class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+                  Ouvrir
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
+      <div class="surface-panel p-5">
+        <p class="text-sm text-slate-500 dark:text-slate-400">Machines</p>
+        <p class="mt-3 text-3xl font-bold text-slate-900 dark:text-slate-100">
+          {{ dashboard.totalMachines }}
+        </p>
+      </div>
+
+      <div class="surface-panel p-5">
+        <p class="text-sm text-slate-500 dark:text-slate-400">Disponibilite</p>
+        <p class="mt-3 text-3xl font-bold text-emerald-600 dark:text-emerald-300">
+          {{ dashboard.availabilityPercent | number:'1.0-1' }}%
+        </p>
+      </div>
+
+      <div class="surface-panel p-5">
+        <p class="text-sm text-slate-500 dark:text-slate-400">Temps d'arret</p>
+        <p class="mt-3 text-3xl font-bold text-red-600 dark:text-red-300">
+          {{ formatDuration(dashboard.totalDowntimeMinutes) }}
+        </p>
+      </div>
+
+      <div class="surface-panel p-5">
+        <p class="text-sm text-slate-500 dark:text-slate-400">Temps moyen entre deux pannes</p>
+        <p class="mt-3 text-3xl font-bold text-sky-600 dark:text-sky-300">
+          {{ getGlobalAverageBetweenFailuresLabel() }}
+        </p>
+        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+          Fiabilite moyenne du parc.
+        </p>
+      </div>
+
+      <div class="surface-panel p-5">
+        <p class="text-sm text-slate-500 dark:text-slate-400">Temps moyen de reparation</p>
+        <p class="mt-3 text-3xl font-bold text-amber-600 dark:text-amber-300">
+          {{ getGlobalAverageRepairTimeLabel() }}
+        </p>
+        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+          Rapidite moyenne des remises en service.
+        </p>
+      </div>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-4">
+      <div class="surface-panel border-red-200 p-4 dark:border-red-900/60">
+        <p class="muted-label">Demandes en retard</p>
+        <p class="mt-2 text-3xl font-bold text-red-600 dark:text-red-300">
+          {{ dashboard.overdueDemandesCount || 0 }}
+        </p>
+      </div>
+      <div class="surface-panel p-4">
+        <p class="muted-label">Planifiees cette semaine</p>
+        <p class="mt-2 text-3xl font-bold text-sky-600 dark:text-sky-300">
+          {{ dashboard.upcomingDemandesCount || 0 }}
+        </p>
+      </div>
+      <div class="surface-panel p-4">
+        <p class="muted-label">Urgentes / critiques</p>
+        <p class="mt-2 text-3xl font-bold text-amber-600 dark:text-amber-300">
+          {{ dashboard.highPriorityDemandesCount || 0 }}
+        </p>
+      </div>
+      <div class="surface-panel p-4">
+        <p class="muted-label">Cout maintenance</p>
+        <p class="mt-2 text-2xl font-bold text-slate-950 dark:text-white">
+          {{ formatMoney(dashboard.totalMaintenanceCost) }}
+        </p>
+      </div>
+      <div class="surface-panel p-4">
+        <p class="muted-label">Pannes longues</p>
+        <p class="mt-2 text-3xl font-bold text-red-600 dark:text-red-300">
+          {{ dashboard.longDowntimeMachinesCount || 0 }}
+        </p>
+      </div>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-3">
+      <section class="surface-panel p-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Objectifs maintenance</h3>
+        <div class="mt-5 space-y-3">
+          <div *ngFor="let objective of dashboard.objectives" class="rounded-md border border-slate-200 p-3 dark:border-slate-800">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <p class="text-sm font-semibold text-slate-900 dark:text-white">{{ objective.label }}</p>
+                <p class="mt-1 text-xs text-slate-500">Objectif: {{ objective.target }}{{ objective.unit }}</p>
+              </div>
+              <span
+                class="rounded-md px-2 py-1 text-xs font-semibold"
+                [class.bg-emerald-50]="objective.achieved"
+                [class.text-emerald-700]="objective.achieved"
+                [class.bg-red-50]="!objective.achieved"
+                [class.text-red-700]="!objective.achieved"
+              >
+                {{ objective.value | number:'1.0-1' }}{{ objective.unit }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="surface-panel p-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Notifications</h3>
+        <div class="mt-5 divide-y divide-slate-100 dark:divide-slate-800">
+          <div *ngFor="let item of dashboard.notifications | slice:0:6" class="py-3">
+            <p class="text-sm font-semibold text-slate-900 dark:text-white">{{ item.title }}</p>
+            <p class="mt-1 text-sm text-slate-500">{{ item.message }}</p>
+            <p class="mt-1 text-xs text-slate-400">{{ item.date | date:'dd/MM/yyyy HH:mm' }}</p>
+          </div>
+          <p *ngIf="!dashboard.notifications?.length" class="py-5 text-center text-sm text-slate-500">
+            Aucune notification.
+          </p>
+        </div>
+      </section>
+
+      <section class="surface-panel p-6">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Calendrier maintenance</h3>
+            <p class="mt-1 text-sm text-slate-500">Demandes planifiees et controles periodiques.</p>
+            <div class="mt-3 flex flex-wrap gap-3 text-xs font-semibold text-slate-600">
+              <label class="inline-flex items-center gap-2 rounded-md border border-blue-100 bg-blue-50 px-2.5 py-1 text-blue-700">
+                <input type="checkbox" [(ngModel)]="showPlannedDemandes" />
+                Demande planifiee
+              </label>
+              <label class="inline-flex items-center gap-2 rounded-md border border-orange-100 bg-orange-50 px-2.5 py-1 text-orange-700">
+                <input type="checkbox" [(ngModel)]="showPeriodicControls" />
+                Controle periodique
+              </label>
+            </div>
+          </div>
+          <button type="button" class="primary-action" (click)="openCalendarPopup()">Ouvrir calendrier</button>
+        </div>
+        <div class="mt-5 divide-y divide-slate-100 dark:divide-slate-800">
+          <div *ngFor="let item of getPreviewCalendarItems()" class="py-3">
+            <div class="flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ item.machineNom }}</p>
+                <p class="mt-1 text-xs text-slate-500">{{ item.typeMaintenance }}</p>
+                <span
+                  class="mt-2 inline-flex rounded-md px-2 py-1 text-[11px] font-semibold"
+                  [class.bg-blue-50]="item.source === 'DEMANDE'"
+                  [class.text-blue-700]="item.source === 'DEMANDE'"
+                  [class.bg-orange-50]="item.source === 'CONTROLE'"
+                  [class.text-orange-700]="item.source === 'CONTROLE'"
+                >
+                  {{ item.source === 'CONTROLE' ? 'Controle periodique' : 'Demande planifiee' }}
+                </span>
+              </div>
+              <div class="text-right">
+                <p class="font-mono text-xs" [class.text-red-600]="item.retard" [class.text-sky-600]="!item.retard">
+                  {{ item.date | date:'dd/MM HH:mm' }}
+                </p>
+                <p class="mt-1 text-xs text-slate-500">{{ getPriorityLabel(item.priorite) }}</p>
+              </div>
+            </div>
+          </div>
+          <p *ngIf="!getPreviewCalendarItems().length" class="py-5 text-center text-sm text-slate-500">
+            Rien a afficher avec les filtres selectionnes.
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <div class="rounded-lg border border-blue-100 bg-blue-50/70 px-5 py-4 dark:border-slate-800 dark:bg-slate-900/60">
+      <p class="muted-label">Analyse des risques machines</p>
+      <h3 class="mt-1 text-lg font-semibold text-slate-950 dark:text-white">Score de criticite et machines a surveiller</h3>
+      <p class="mt-2 max-w-5xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+        Cette partie aide a comprendre quelles machines demandent plus d'attention. Le score de criticite donne une note globale de risque, alors que la liste des machines critiques montre les machines qui ont deja cause des pannes ou beaucoup de temps d'arret.
+      </p>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-2">
+      <section class="surface-panel p-6">
+        <div class="border-b border-blue-100 pb-4 dark:border-slate-800">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Score criticite machine</h3>
+          <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            Le score est calcule automatiquement a partir de 5 elements : cout de maintenance, nombre de pannes, temps d'arret, disponibilite et temps moyen de reparation. Plus le score est eleve, plus la machine doit etre surveillee.
+          </p>
+          <div class="mt-3 grid gap-2 text-xs font-semibold sm:grid-cols-3">
+            <span class="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-700">0 a 39 : Normal</span>
+            <span class="rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-orange-700">40 a 69 : A surveiller</span>
+            <span class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-red-700">70 et plus : Critique</span>
+          </div>
+        </div>
+
+        <div class="mt-5 divide-y divide-slate-100 dark:divide-slate-800">
+          <a
+            *ngFor="let machine of dashboard.criticalMachines"
+            [routerLink]="['/machinesD', machine.machineId]"
+            class="flex items-center justify-between gap-4 rounded-md px-3 py-3 hover:bg-blue-50 dark:hover:bg-slate-800/60"
+          >
+            <div class="min-w-0">
+              <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ machine.nom }}</p>
+              <p class="mt-1 font-mono text-xs text-slate-500">{{ machine.ref }}</p>
+              <p class="mt-2 text-xs text-slate-500">
+                Raison principale : {{ machine.raison }}
+              </p>
+            </div>
+            <div class="text-right">
+              <p class="text-lg font-bold text-red-600">{{ machine.score }}</p>
+              <p class="text-xs text-slate-500">{{ machine.niveau }}</p>
+            </div>
+          </a>
+          <p *ngIf="!dashboard.criticalMachines?.length" class="py-5 text-center text-sm text-slate-500">
+            Aucun score de risque detecte pour le moment.
+          </p>
+        </div>
+      </section>
+
+      <section class="surface-panel p-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Causes de panne</h3>
+        <div class="mt-5 divide-y divide-slate-100 dark:divide-slate-800">
+          <div *ngFor="let item of dashboard.causeStats" class="flex items-center justify-between gap-4 py-3">
+            <p class="text-sm font-semibold text-slate-900 dark:text-white">{{ item.label }}</p>
+            <span class="rounded-md bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+              {{ item.cost | number:'1.0-0' }}
+            </span>
+          </div>
+          <p *ngIf="!dashboard.causeStats?.length" class="py-5 text-center text-sm text-slate-500">
+            Aucune cause saisie dans les interventions.
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <div class="rounded-lg border border-orange-100 bg-orange-50/70 px-5 py-4 dark:border-slate-800 dark:bg-slate-900/60">
+      <p class="muted-label text-orange-700 dark:text-orange-300">Suivi operationnel</p>
+      <h3 class="mt-1 text-lg font-semibold text-slate-950 dark:text-white">Etat du parc, demandes et machines problematiques</h3>
+      <p class="mt-2 max-w-5xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+        Cette section separe les informations du quotidien : repartition des etats actuels, nombre de demandes par statut, puis machines qui ont eu le plus de pannes ou de temps d'arret dans l'historique.
+      </p>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-3">
+      <section class="surface-panel p-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          Etats actuels
+        </h3>
+
+        <div class="mt-5 space-y-4">
+          <div *ngFor="let state of dashboard.machinesByState" class="space-y-2">
+            <div class="flex items-center justify-between gap-4 text-sm">
+              <div class="flex items-center gap-2">
+                <span class="h-3 w-3 rounded-full" [style.backgroundColor]="state.color"></span>
+                <span class="font-medium text-slate-700 dark:text-slate-200">{{ state.label }}</span>
+              </div>
+              <span class="font-mono text-slate-500 dark:text-slate-400">{{ state.count }}</span>
+            </div>
+            <div class="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
+              <div
+                class="h-2 rounded-full"
+                [style.width.%]="dashboard.totalMachines ? (state.count * 100 / dashboard.totalMachines) : 0"
+                [style.backgroundColor]="state.color"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="surface-panel p-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          Demandes maintenance
+        </h3>
+
+        <div class="mt-5 divide-y divide-slate-100 dark:divide-slate-800">
+          <div *ngFor="let status of getStatusEntries()" class="flex items-center justify-between py-3">
+            <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ status.label }}</span>
+            <span class="rounded-md bg-slate-100 px-2.5 py-1 font-mono text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+              {{ status.count }}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section class="surface-panel p-6">
+        <div class="border-b border-orange-100 pb-4 dark:border-slate-800">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Machines critiques
+          </h3>
+          <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            Ici, une machine apparait surtout si elle a des pannes ou un temps d'arret important. Ce bloc est plus simple que le score : il montre les problemes observes directement dans l'historique.
+          </p>
+        </div>
+
+        <div class="mt-5 space-y-3" *ngIf="dashboard.topProblemMachines.length > 0; else noProblems">
+          <a
+            *ngFor="let machine of dashboard.topProblemMachines"
+            [routerLink]="['/machinesD', machine.id]"
+            class="block rounded-md border border-orange-100 bg-white p-4 hover:border-orange-300 hover:bg-orange-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-800/70"
+          >
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="font-semibold text-slate-900 dark:text-slate-100">{{ machine.nom }}</p>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ machine.ref }}</p>
+              </div>
+              <span class="rounded-md bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-200">
+                {{ machine.failureCount }} pannes
+              </span>
+            </div>
+            <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+              Temps d'arret: {{ formatDuration(machine.downtimeMinutes) }}
+            </p>
+            <p class="mt-2 text-xs text-slate-500">
+              Lecture : plus il y a de pannes et plus le temps d'arret est long, plus cette machine est prioritaire pour l'analyse maintenance.
+            </p>
+          </a>
+        </div>
+
+        <ng-template #noProblems>
+          <p class="mt-5 text-sm text-slate-500 dark:text-slate-400">
+            Aucune panne ou arret detecte dans l'historique.
+          </p>
+        </ng-template>
+      </section>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-2">
+      <section class="surface-panel p-6">
+        <div class="flex items-center justify-between gap-3">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Retards a traiter
+          </h3>
+          <div class="flex gap-2">
+            <button type="button" class="secondary-action" (click)="openOverdueExport()">Export</button>
+            <button type="button" class="secondary-action" (click)="openOverdueReport()">PDF</button>
+          </div>
+        </div>
+        <div class="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
+          <div *ngFor="let demande of dashboard.overdueDemandes" class="py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="font-semibold text-slate-950 dark:text-white">{{ demande.machineNom }}</p>
+                <p class="mt-1 text-xs text-slate-500">{{ demande.typeMaintenance || 'Maintenance' }}</p>
+              </div>
+              <span class="rounded-md bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-200">
+                {{ getPriorityLabel(demande.priorite) }}
+              </span>
+            </div>
+            <p class="mt-2 text-xs text-slate-500">
+              Planifiee le {{ demande.dateSouhaitee | date:'dd/MM/yyyy HH:mm' }}
+            </p>
+          </div>
+          <p *ngIf="dashboard.overdueDemandes.length === 0" class="py-4 text-sm text-slate-500">
+            Aucun retard.
+          </p>
+        </div>
+      </section>
+
+      <section class="surface-panel p-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          Planning des 7 prochains jours
+        </h3>
+        <div class="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
+          <div *ngFor="let demande of dashboard.upcomingDemandes" class="py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="font-semibold text-slate-950 dark:text-white">{{ demande.machineNom }}</p>
+                <p class="mt-1 text-xs text-slate-500">{{ demande.typeMaintenance || 'Maintenance' }}</p>
+              </div>
+              <span class="rounded-md bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-950/40 dark:text-sky-200">
+                {{ demande.dateSouhaitee | date:'dd/MM HH:mm' }}
+              </span>
+            </div>
+          </div>
+          <p *ngIf="dashboard.upcomingDemandes.length === 0" class="py-4 text-sm text-slate-500">
+            Aucune intervention planifiee cette semaine.
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-3">
+      <section class="surface-panel p-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          Cout par machine
+        </h3>
+        <div class="mt-4 space-y-3">
+          <div *ngFor="let item of dashboard.costByMachine" class="flex items-center justify-between gap-3 text-sm">
+            <span class="truncate text-slate-700 dark:text-slate-200">{{ item.label }}</span>
+            <span class="font-mono font-semibold text-slate-950 dark:text-white">{{ formatMoney(item.cost) }}</span>
+          </div>
+          <p *ngIf="dashboard.costByMachine.length === 0" class="text-sm text-slate-500">Aucun cout saisi.</p>
+        </div>
+      </section>
+
+      <section class="surface-panel p-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          Cout par type
+        </h3>
+        <div class="mt-4 space-y-3">
+          <div *ngFor="let item of dashboard.costByType" class="flex items-center justify-between gap-3 text-sm">
+            <span class="truncate text-slate-700 dark:text-slate-200">{{ item.label }}</span>
+            <span class="font-mono font-semibold text-slate-950 dark:text-white">{{ formatMoney(item.cost) }}</span>
+          </div>
+          <p *ngIf="dashboard.costByType.length === 0" class="text-sm text-slate-500">Aucun cout saisi.</p>
+        </div>
+      </section>
+
+      <section class="surface-panel p-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          Cout par mois
+        </h3>
+        <div class="mt-4 space-y-3">
+          <div *ngFor="let item of dashboard.costByMonth" class="flex items-center justify-between gap-3 text-sm">
+            <span class="font-mono text-slate-700 dark:text-slate-200">{{ item.label }}</span>
+            <span class="font-mono font-semibold text-slate-950 dark:text-white">{{ formatMoney(item.cost) }}</span>
+          </div>
+          <p *ngIf="dashboard.costByMonth.length === 0" class="text-sm text-slate-500">Aucun cout saisi.</p>
+        </div>
+      </section>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-2">
+      <section class="surface-panel p-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          Machines trop longtemps en panne
+        </h3>
+        <div class="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
+          <a
+            *ngFor="let machine of dashboard.longDowntimeMachines"
+            [routerLink]="['/machinesD', machine.machineId]"
+            class="flex items-center justify-between gap-4 py-3"
+          >
+            <div>
+              <p class="font-semibold text-slate-950 dark:text-white">{{ machine.nom }}</p>
+              <p class="mt-1 text-xs text-slate-500">{{ machine.etat }}</p>
+            </div>
+            <span class="font-mono text-sm font-semibold text-red-600 dark:text-red-300">
+              {{ formatDuration(machine.minutes) }}
+            </span>
+          </a>
+          <p *ngIf="dashboard.longDowntimeMachines.length === 0" class="py-4 text-sm text-slate-500">
+            Aucune panne longue detectee.
+          </p>
+        </div>
+      </section>
+
+      <section class="surface-panel p-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          Maintenance preventive conseillee
+        </h3>
+        <div class="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
+          <a
+            *ngFor="let item of dashboard.preventiveRecommendations"
+            [routerLink]="['/machinesD', item.machineId]"
+            class="block py-3"
+          >
+            <p class="font-semibold text-slate-950 dark:text-white">{{ item.nom }}</p>
+            <p class="mt-1 text-xs text-amber-600 dark:text-amber-300">{{ item.reason }}</p>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ item.recommendation }}</p>
+          </a>
+          <p *ngIf="dashboard.preventiveRecommendations.length === 0" class="py-4 text-sm text-slate-500">
+            Aucune recommandation preventive pour le moment.
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <section class="surface-panel overflow-hidden">
+      <div class="border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          Indicateurs de fiabilite par machine
+        </h3>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Le temps moyen entre deux pannes et le temps moyen de reparation sont calcules depuis l'historique des actions.
+        </p>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
+          <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-950/60 dark:text-slate-400">
+          <tr>
+            <th class="px-5 py-3">Machine</th>
+            <th class="px-5 py-3">Disponibilite</th>
+            <th class="px-5 py-3">Temps entre pannes</th>
+            <th class="px-5 py-3">Temps de reparation</th>
+            <th class="px-5 py-3">Pannes</th>
+            <th class="px-5 py-3">Temps d'arret</th>
+            <th class="px-5 py-3 text-right">Detail</th>
+          </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+          <tr
+            *ngFor="let machine of dashboard.machineIndicators"
+            class="hover:bg-slate-50 dark:hover:bg-slate-800/60"
+          >
+            <td class="px-5 py-4">
+              <p class="font-semibold text-slate-950 dark:text-white">{{ machine.nom }}</p>
+              <p class="mt-1 font-mono text-xs text-slate-500 dark:text-slate-400">{{ machine.ref }}</p>
+            </td>
+            <td class="px-5 py-4 font-mono text-slate-700 dark:text-slate-300">
+              {{ machine.availabilityPercent | number:'1.0-1' }}%
+            </td>
+            <td class="px-5 py-4 font-mono text-sky-700 dark:text-sky-300">
+              {{ getAverageBetweenFailuresLabel(machine) }}
+            </td>
+            <td class="px-5 py-4 font-mono text-amber-700 dark:text-amber-300">
+              {{ getAverageRepairTimeLabel(machine) }}
+            </td>
+            <td class="px-5 py-4 font-mono text-slate-700 dark:text-slate-300">
+              {{ machine.failureCount }}
+            </td>
+            <td class="px-5 py-4 text-slate-700 dark:text-slate-300">
+              {{ formatDuration(machine.downtimeMinutes) }}
+            </td>
+            <td class="px-5 py-4 text-right">
+              <a
+                [routerLink]="['/machinesD', machine.machineId]"
+                class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Ouvrir
+              </a>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </ng-container>
+
+  <div
+    *ngIf="calendarPopupOpen"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+    (click)="closeCalendarPopup()"
+  >
+    <section
+      class="max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-lg border border-blue-100 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="flex flex-col gap-4 border-b border-blue-100 px-5 py-4 dark:border-slate-800 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p class="muted-label">Calendrier global</p>
+          <h3 class="mt-1 text-xl font-bold capitalize text-slate-950 dark:text-white">{{ getCalendarMonthLabel() }}</h3>
+          <p class="mt-1 text-sm text-slate-500">Demandes de maintenance et prochaines dates des controles periodiques.</p>
+          <div class="mt-3 flex flex-wrap gap-3 text-xs font-semibold text-slate-600">
+            <label class="inline-flex items-center gap-2 rounded-md border border-blue-100 bg-blue-50 px-2.5 py-1 text-blue-700">
+              <input type="checkbox" [(ngModel)]="showPlannedDemandes" />
+              Demande planifiee
+            </label>
+            <label class="inline-flex items-center gap-2 rounded-md border border-orange-100 bg-orange-50 px-2.5 py-1 text-orange-700">
+              <input type="checkbox" [(ngModel)]="showPeriodicControls" />
+              Controle periodique
+            </label>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" class="secondary-action" (click)="previousCalendarMonth()">Mois precedent</button>
+          <button type="button" class="secondary-action" (click)="goToCurrentCalendarMonth()">Aujourd'hui</button>
+          <button type="button" class="secondary-action" (click)="nextCalendarMonth()">Mois suivant</button>
+          <button type="button" class="primary-action" (click)="closeCalendarPopup()">Fermer</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-7 border-b border-blue-100 bg-blue-50 text-center text-xs font-semibold uppercase text-blue-700 dark:border-slate-800 dark:bg-slate-950 dark:text-blue-200">
+        <div class="px-2 py-3">Lun</div>
+        <div class="px-2 py-3">Mar</div>
+        <div class="px-2 py-3">Mer</div>
+        <div class="px-2 py-3">Jeu</div>
+        <div class="px-2 py-3">Ven</div>
+        <div class="px-2 py-3">Sam</div>
+        <div class="px-2 py-3">Dim</div>
+      </div>
+
+      <div class="max-h-[62vh] overflow-y-auto">
+        <div class="grid grid-cols-7">
+          <div
+            *ngFor="let day of getCalendarDays()"
+            class="min-h-32 border-b border-r border-blue-50 p-2 dark:border-slate-800"
+            [class.bg-slate-50]="!day.inMonth"
+            [class.dark:bg-slate-950]="!day.inMonth"
+            [class.bg-orange-50]="day.today"
+          >
+            <div class="mb-2 flex items-center justify-between">
+              <span
+                class="inline-flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold"
+                [class.bg-blue-700]="day.today"
+                [class.text-white]="day.today"
+                [class.text-slate-400]="!day.inMonth && !day.today"
+                [class.text-slate-700]="day.inMonth && !day.today"
+              >
+                {{ day.date | date:'d' }}
+              </span>
+              <span *ngIf="day.items.length" class="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700">
+                {{ day.items.length }}
+              </span>
+            </div>
+
+            <div class="space-y-1">
+              <div
+                *ngFor="let item of day.items"
+                class="rounded-md border px-2 py-1 text-[11px]"
+                [class.border-blue-200]="item.source === 'DEMANDE'"
+                [class.bg-blue-50]="item.source === 'DEMANDE'"
+                [class.text-blue-800]="item.source === 'DEMANDE'"
+                [class.border-orange-200]="item.source === 'CONTROLE'"
+                [class.bg-orange-50]="item.source === 'CONTROLE'"
+                [class.text-orange-800]="item.source === 'CONTROLE'"
+              >
+                <p class="truncate font-bold">{{ item.machineNom }}</p>
+                <p class="truncate">{{ item.title }}</p>
+                <p class="font-mono opacity-80">{{ item.date | date:'HH:mm' }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3 border-t border-blue-100 px-5 py-3 text-xs text-slate-500 dark:border-slate-800">
+        <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded bg-blue-100 ring-1 ring-blue-200"></span>Demande planifiee</span>
+        <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded bg-orange-100 ring-1 ring-orange-200"></span>Controle periodique</span>
+        <span class="ml-auto font-semibold text-slate-600">{{ getAllCalendarItems().length }} element(s)</span>
+      </div>
+    </section>
+  </div>
+</div>

@@ -1,0 +1,754 @@
+<ion-content fullscreen>
+  <div class="mobile-page">
+    <div class="mobile-container">
+      <header class="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          class="mobile-secondary"
+          (click)="history.back()"
+        >
+          <ion-icon name="arrow-back-outline" class="mr-1"></ion-icon>
+          Retour
+        </button>
+        <p class="flex items-center gap-2 text-sm font-semibold text-blue-700">
+          <ion-icon name="cube-outline"></ion-icon>
+          Detail machine
+        </p>
+        <button
+          type="button"
+          class="mobile-secondary"
+          [disabled]="pendingOfflineCount === 0"
+          (click)="syncOffline()"
+        >
+          <ion-icon name="sync-outline" class="mr-1"></ion-icon>
+          Sync {{ pendingOfflineCount }}
+        </button>
+      </header>
+
+      <div *ngIf="loading" class="flex justify-center py-12">
+        <ion-spinner name="crescent"></ion-spinner>
+      </div>
+
+      <div *ngIf="!loading && machine" class="space-y-5">
+        <section class="rounded-xl bg-blue-950 p-5 text-white shadow-sm">
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+              <p class="text-xs font-semibold uppercase tracking-wide text-orange-200">
+                {{ isMaintenanceProfile ? 'Maintenance' : 'Operateur' }}
+              </p>
+              <h1 class="mt-1 truncate text-2xl font-bold">{{ machine.nom }}</h1>
+              <p class="mt-1 font-mono text-xs text-slate-300">{{ machine.ref }}</p>
+            </div>
+            <span
+              class="inline-flex shrink-0 items-center gap-1 rounded-md border bg-white px-2.5 py-1 text-xs font-semibold"
+              [ngStyle]="getEtatStyle()"
+            >
+              <span class="h-2 w-2 rounded-full" [style.backgroundColor]="machine.typeAction?.color || '#64748b'"></span>
+              {{ getEtatLabel() }}
+            </span>
+          </div>
+
+          <div class="mt-5 rounded-lg border border-white/10 bg-white/10 px-4 py-5 text-center text-white">
+            <p class="text-xs font-semibold uppercase tracking-wide text-blue-200">Temps dans l'etat actuel</p>
+            <p class="mt-3 font-mono text-4xl font-bold tracking-wide text-orange-300">
+              {{ getElapsedCurrent() }}
+            </p>
+            <p class="mt-2 text-xs text-slate-400" *ngIf="machine.dateDebutAction">
+              Depuis {{ machine.dateDebutAction | date:'dd/MM/yyyy HH:mm' }}
+            </p>
+          </div>
+        </section>
+
+        <section *ngIf="indicators" class="grid grid-cols-2 gap-3">
+          <div class="mobile-card">
+            <p class="text-xs text-slate-500">Disponibilite</p>
+            <p class="mt-2 text-2xl font-bold text-emerald-700">{{ indicators.availabilityPercent | number:'1.0-1' }}%</p>
+          </div>
+          <div class="mobile-card">
+            <p class="text-xs text-slate-500">Pannes</p>
+            <p class="mt-2 text-2xl font-bold text-red-700">{{ indicators.failureCount }}</p>
+          </div>
+          <div class="mobile-card">
+            <p class="text-xs text-slate-500">Temps moyen entre pannes</p>
+            <p class="mt-2 text-xl font-bold text-sky-700">{{ getAverageBetweenFailuresLabel(indicators) }}</p>
+            <p class="mt-1 text-xs text-slate-500">{{ getAverageBetweenFailuresHelp(indicators) }}</p>
+          </div>
+          <div class="mobile-card">
+            <p class="text-xs text-slate-500">Temps moyen de reparation</p>
+            <p class="mt-2 text-xl font-bold text-amber-700">{{ getAverageRepairTimeLabel(indicators) }}</p>
+            <p class="mt-1 text-xs text-slate-500">{{ getAverageRepairTimeHelp(indicators) }}</p>
+          </div>
+          <div class="mobile-card col-span-2">
+            <div class="flex items-center justify-between gap-4">
+              <p class="text-sm text-slate-500">Temps d'arret total</p>
+              <p class="font-semibold text-slate-950">{{ formatDuration(indicators.downtimeMinutes) }}</p>
+            </div>
+          </div>
+        </section>
+
+        <div class="mobile-segment" [ngClass]="isMaintenanceProfile ? 'grid-cols-3' : 'grid-cols-2'">
+          <button
+            type="button"
+            class="mobile-segment-button"
+            [class.mobile-segment-active]="activeTab === 'etat'"
+            (click)="activeTab = 'etat'"
+          >
+            <ion-icon name="swap-horizontal-outline" class="mr-1"></ion-icon>
+            Etat
+          </button>
+          <button
+            type="button"
+            class="mobile-segment-button"
+            [class.mobile-segment-active]="activeTab === 'demandes'"
+            (click)="activeTab = 'demandes'"
+          >
+            <ion-icon name="clipboard-outline" class="mr-1"></ion-icon>
+            Demandes
+          </button>
+          <button
+            *ngIf="isMaintenanceProfile"
+            type="button"
+            class="mobile-segment-button"
+            [class.mobile-segment-active]="activeTab === 'intervention'"
+            (click)="activeTab = 'intervention'"
+          >
+            <ion-icon name="build-outline" class="mr-1"></ion-icon>
+            Intervention
+          </button>
+        </div>
+
+        <section *ngIf="activeTab === 'etat'" class="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+            <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-950">
+              <ion-icon name="swap-horizontal-outline" class="text-blue-700"></ion-icon>
+              Changer l'etat
+            </h2>
+            <ion-spinner *ngIf="changingState" name="crescent" class="!h-5 !w-5"></ion-spinner>
+          </div>
+
+          <div class="space-y-2 p-3">
+            <button
+              *ngFor="let t of typeActions"
+              type="button"
+              class="w-full rounded-md border px-4 py-3 text-left font-medium active:scale-[0.99]"
+              [ngStyle]="{
+                'border-color': t.color || '#64748b',
+                'background-color': t.id === machine.typeAction?.id ? (t.color || '#22c55e') + '22' : '#ffffff',
+                'color': '#0f172a'
+              }"
+              (click)="onChangeEtat(t)"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <span class="h-3 w-3 rounded-full" [style.backgroundColor]="t.color || '#64748b'"></span>
+                  <span class="font-semibold">{{ t.libelle || t.code }}</span>
+                </div>
+                <span *ngIf="t.id === machine.typeAction?.id" class="text-xs font-semibold text-slate-500">Actuel</span>
+              </div>
+            </button>
+          </div>
+        </section>
+
+        <section *ngIf="isMaintenanceProfile && activeTab === 'demandes'" class="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div class="border-b border-slate-200 px-4 py-3">
+            <h2 class="text-sm font-semibold text-slate-950">Demandes a traiter</h2>
+          </div>
+
+          <div class="divide-y divide-slate-100">
+            <div *ngFor="let d of demandes" class="space-y-3 px-4 py-3">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-slate-950">
+                    {{ d.typeMaintenance?.libelle || d.typeMaintenance?.code || 'Maintenance' }}
+                  </p>
+                  <p class="mt-1 text-xs text-slate-500">{{ d.dateDemande | date:'dd/MM/yyyy HH:mm' }}</p>
+                  <p *ngIf="d.dateSouhaitee" class="mt-1 text-xs text-slate-500">
+                    Planifiee: {{ d.dateSouhaitee | date:'dd/MM/yyyy HH:mm' }}
+                  </p>
+                  <p *ngIf="isDemandeLate(d)" class="mt-1 text-xs font-semibold text-red-600">
+                    {{ getRetardLabel(d) }}
+                  </p>
+                </div>
+                <span class="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+                  {{ getStatutLabel(d.statut) }}
+                </span>
+              </div>
+
+              <span class="inline-flex rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700">
+                Priorite: {{ getPrioriteLabel(d.priorite) }}
+              </span>
+
+              <p class="text-sm leading-5 text-slate-600">{{ d.description }}</p>
+
+              <div class="flex flex-wrap gap-2">
+                <input
+                  *ngIf="d.statut === 'EN_ATTENTE'"
+                  type="datetime-local"
+                  class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs text-slate-950"
+                  [ngModel]="getDefaultPlanificationDate(d)"
+                  (ngModelChange)="planificationDates[d.id] = $event"
+                />
+                <button
+                  *ngIf="d.statut === 'EN_ATTENTE'"
+                  type="button"
+                  class="rounded-md border border-sky-300 px-3 py-2 text-xs font-semibold text-sky-700"
+                  [disabled]="updatingDemandeId === d.id || !planificationDates[d.id]"
+                  (click)="planifierDemande(d)"
+                >
+                  Planifier
+                </button>
+                <button
+                  *ngIf="canMarkPendingDemande(d)"
+                  type="button"
+                  class="rounded-md border border-amber-300 px-3 py-2 text-xs font-semibold text-amber-700"
+                  [disabled]="updatingDemandeId === d.id"
+                  (click)="updateDemandeStatut(d, 'EN_ATTENTE')"
+                >
+                  En attente
+                </button>
+                <button
+                  *ngIf="canStartDemande(d)"
+                  type="button"
+                  class="rounded-md border border-emerald-300 px-3 py-2 text-xs font-semibold text-emerald-700"
+                  [disabled]="updatingDemandeId === d.id"
+                  (click)="updateDemandeStatut(d, 'EN_COURS')"
+                >
+                  Demarrer
+                </button>
+                <button
+                  *ngIf="canFinishDemande(d)"
+                  type="button"
+                  class="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700"
+                  [disabled]="updatingDemandeId === d.id"
+                  (click)="updateDemandeStatut(d, 'TERMINEE')"
+                >
+                  Terminer
+                </button>
+                <button
+                  *ngIf="canFinishDemande(d)"
+                  type="button"
+                  class="rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white"
+                  [disabled]="updatingDemandeId === d.id"
+                  (click)="openInterventionForDemande(d)"
+                >
+                  Intervention
+                </button>
+                <button
+                  *ngIf="d.statut === 'EN_ATTENTE_VALIDATION'"
+                  type="button"
+                  class="rounded-md border border-emerald-300 px-3 py-2 text-xs font-semibold text-emerald-700"
+                  [disabled]="updatingDemandeId === d.id"
+                  (click)="validerIntervention(d)"
+                >
+                  Valider
+                </button>
+                <button
+                  *ngIf="d.statut === 'EN_ATTENTE_VALIDATION'"
+                  type="button"
+                  class="rounded-md border border-amber-300 px-3 py-2 text-xs font-semibold text-amber-700"
+                  [disabled]="updatingDemandeId === d.id"
+                  (click)="refuserIntervention(d)"
+                >
+                  Refuser
+                </button>
+                <button
+                  *ngIf="canCancelDemande(d)"
+                  type="button"
+                  class="rounded-md border border-red-300 px-3 py-2 text-xs font-semibold text-red-700"
+                  [disabled]="updatingDemandeId === d.id"
+                  (click)="updateDemandeStatut(d, 'ANNULEE')"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+
+            <div *ngIf="demandes.length === 0" class="px-4 py-5 text-center text-sm text-slate-500">
+              Aucune demande pour cette machine.
+            </div>
+          </div>
+        </section>
+
+        <section *ngIf="isMaintenanceProfile && activeTab === 'intervention'" class="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+            <h2 class="text-sm font-semibold text-slate-950">Intervention / prestation</h2>
+            <button
+              type="button"
+              class="text-sm font-semibold text-slate-900"
+              (click)="toggleInterventionPanel()"
+            >
+              {{ showInterventionPanel ? 'Fermer' : 'Ouvrir' }}
+            </button>
+          </div>
+
+          <div *ngIf="showInterventionPanel" class="space-y-4 p-4">
+            <div *ngIf="selectedDemandeForIntervention" class="rounded-md border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900">
+              Intervention liee a la demande #{{ selectedDemandeForIntervention.id }}.
+            </div>
+
+            <div>
+              <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Origine intervention</p>
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  class="rounded-md border px-3 py-2 text-sm font-semibold"
+                  [class.bg-slate-950]="interventionMode === 'INTERNE'"
+                  [class.text-white]="interventionMode === 'INTERNE'"
+                  (click)="interventionMode = 'INTERNE'"
+                >
+                  Interne
+                </button>
+                <button
+                  type="button"
+                  class="rounded-md border px-3 py-2 text-sm font-semibold"
+                  [class.bg-slate-950]="interventionMode === 'EXTERNE'"
+                  [class.text-white]="interventionMode === 'EXTERNE'"
+                  (click)="interventionMode = 'EXTERNE'"
+                >
+                  Externe
+                </button>
+              </div>
+            </div>
+
+            <div *ngIf="interventionMode === 'EXTERNE'" class="space-y-3 rounded-md border border-amber-200 bg-amber-50 p-3">
+              <p class="text-sm font-semibold text-amber-900">Informations fournisseur</p>
+              <label class="block">
+                <span class="mb-1 block text-xs font-semibold uppercase tracking-wide text-amber-900">Fournisseur / prestataire *</span>
+                <input class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm" [(ngModel)]="fournisseurNom" placeholder="Nom fournisseur" />
+              </label>
+              <label class="block">
+                <span class="mb-1 block text-xs font-semibold uppercase tracking-wide text-amber-900">Personne a contacter</span>
+                <input class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm" [(ngModel)]="fournisseurContact" placeholder="Nom contact" />
+              </label>
+              <label class="block">
+                <span class="mb-1 block text-xs font-semibold uppercase tracking-wide text-amber-900">Telephone</span>
+                <input class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm" [(ngModel)]="fournisseurTelephone" placeholder="+212..." />
+              </label>
+              <label class="block">
+                <span class="mb-1 block text-xs font-semibold uppercase tracking-wide text-amber-900">Email</span>
+                <input class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm" [(ngModel)]="fournisseurEmail" placeholder="contact@fournisseur.com" />
+              </label>
+              <label class="block">
+                <span class="mb-1 block text-xs font-semibold uppercase tracking-wide text-amber-900">Reference devis / commande</span>
+                <input class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm" [(ngModel)]="referenceDevis" placeholder="DEV-001" />
+              </label>
+              <label class="block">
+                <span class="mb-1 block text-xs font-semibold uppercase tracking-wide text-amber-900">Message technique</span>
+                <textarea class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm" rows="3" [(ngModel)]="messageDemandeExterne" placeholder="Message de demande preparee, non envoyee"></textarea>
+              </label>
+              <button type="button" class="mobile-secondary w-full" (click)="prepareExternalDraft()">
+                Preparer brouillon externe
+              </button>
+            </div>
+
+            <div>
+              <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Type de maintenance</p>
+              <div class="space-y-2">
+                <button
+                  *ngFor="let t of typeMaintenances"
+                  type="button"
+                  class="w-full rounded-md border px-4 py-3 text-left text-sm font-semibold"
+                  [ngStyle]="{
+                    'border-color': t.color || '#64748b',
+                    'background-color': t.id === selectedInterventionTypeId ? (t.color || '#0ea5e9') + '22' : '#ffffff',
+                    'color': '#0f172a'
+                  }"
+                  (click)="selectInterventionType(t)"
+                >
+                  {{ t.libelle || t.code }}
+                </button>
+
+                <button
+                  type="button"
+                  class="w-full rounded-md border border-dashed border-slate-400 px-4 py-3 text-left text-sm font-semibold text-slate-700"
+                  (click)="onSelectAutreIntervention()"
+                >
+                  Autre type de maintenance
+                </button>
+              </div>
+            </div>
+
+            <div *ngIf="showNewInterventionTypeInput">
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Nouveau type
+              </label>
+              <input
+                type="text"
+                [(ngModel)]="newInterventionTypeLabel"
+                class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm text-slate-950"
+                placeholder="Ex: Prestation externe"
+              />
+            </div>
+
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Description
+              </label>
+              <textarea
+                rows="4"
+                [(ngModel)]="interventionDescription"
+                class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm text-slate-950"
+                placeholder="Decrire l'intervention realisee..."
+              ></textarea>
+            </div>
+
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Commentaire
+              </label>
+              <textarea
+                rows="3"
+                [(ngModel)]="interventionNote"
+                class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm text-slate-950"
+                placeholder="Pieces changees, suite a donner, observation..."
+              ></textarea>
+            </div>
+
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Pieces utilisees dans le stock
+              </label>
+              <div class="grid grid-cols-[minmax(0,1fr)_90px] gap-2">
+                <select
+                  [(ngModel)]="selectedPieceId"
+                  class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm text-slate-950"
+                >
+                  <option [ngValue]="undefined">Choisir une piece</option>
+                  <option *ngFor="let piece of piecesCompatibles" [ngValue]="piece.id">
+                    {{ piece.reference }} - {{ piece.libelle }} ({{ piece.quantite }})
+                  </option>
+                </select>
+                <input
+                  type="number"
+                  min="1"
+                  [(ngModel)]="selectedPieceQuantity"
+                  class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm text-slate-950"
+                />
+              </div>
+              <button type="button" class="mobile-secondary mt-2 w-full" (click)="addPieceIntervention()">
+                Ajouter piece
+              </button>
+              <div *ngIf="piecesIntervention.length > 0" class="mt-3 space-y-2">
+                <div *ngFor="let piece of piecesIntervention" class="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                  <span class="min-w-0 truncate">{{ piece.label }} x{{ piece.quantite }}</span>
+                  <button type="button" class="text-xs font-semibold text-red-700" (click)="removePieceIntervention(piece.pieceId)">
+                    Retirer
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Note pieces
+              </label>
+              <textarea
+                rows="3"
+                [(ngModel)]="interventionPieces"
+                class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm text-slate-950"
+                placeholder="Observation libre sur les pieces..."
+              ></textarea>
+            </div>
+
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Cause panne
+              </label>
+              <select
+                [(ngModel)]="interventionCause"
+                class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm text-slate-950"
+              >
+                <option value="">Non precisee</option>
+                <option value="Mecanique">Mecanique</option>
+                <option value="Electrique">Electrique</option>
+                <option value="Usure">Usure</option>
+                <option value="Reglage">Reglage</option>
+                <option value="Operateur">Operateur</option>
+                <option value="Autre">Autre</option>
+              </select>
+            </div>
+
+            <div class="rounded-md border border-slate-200 bg-slate-50 p-3">
+              <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Checklist intervention</p>
+              <label class="mb-2 flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" [(ngModel)]="controleEffectue" />
+                Controle effectue
+              </label>
+              <label class="mb-2 flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" [(ngModel)]="nettoyageEffectue" />
+                Nettoyage effectue
+              </label>
+              <label class="flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" [(ngModel)]="testFinalEffectue" />
+                Test final OK
+              </label>
+            </div>
+
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Details checklist
+              </label>
+              <textarea
+                rows="3"
+                [(ngModel)]="interventionChecklist"
+                class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm text-slate-950"
+                placeholder="Points controles, valeurs mesurees, remarques..."
+              ></textarea>
+            </div>
+
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Cout intervention
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                [(ngModel)]="interventionCost"
+                class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm text-slate-950"
+                placeholder="0.00"
+              />
+            </div>
+
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Validation / signature
+              </label>
+              <input
+                type="text"
+                [(ngModel)]="validationSignature"
+                class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm text-slate-950"
+                placeholder="Nom du responsable ou operateur"
+              />
+            </div>
+
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Photo avant
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm"
+                (change)="onInterventionBeforeImageSelected($event)"
+              />
+              <p *ngIf="interventionBeforeImageName" class="mt-2 truncate text-xs text-slate-500">{{ interventionBeforeImageName }}</p>
+            </div>
+
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Photo apres
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm"
+                (change)="onInterventionAfterImageSelected($event)"
+              />
+              <p *ngIf="interventionAfterImageName" class="mt-2 truncate text-xs text-slate-500">{{ interventionAfterImageName }}</p>
+            </div>
+
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Photo optionnelle
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm"
+                (change)="onInterventionImageSelected($event)"
+              />
+              <p *ngIf="interventionImageName" class="mt-2 truncate text-xs text-slate-500">{{ interventionImageName }}</p>
+            </div>
+
+            <button
+              type="button"
+              class="w-full rounded-md bg-slate-950 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+              [disabled]="sendingIntervention"
+              (click)="onCreateIntervention()"
+            >
+              {{ sendingIntervention ? 'Enregistrement...' : 'Enregistrer l intervention' }}
+            </button>
+          </div>
+
+          <div class="space-y-3 p-4">
+            <h3 class="text-sm font-semibold text-slate-950">Interventions enregistrees</h3>
+
+            <div *ngFor="let maintenance of maintenances" class="rounded-md border border-slate-200 bg-slate-50 p-3">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-semibold text-slate-950">
+                    {{ maintenance.type?.libelle || maintenance.type?.code || 'Intervention' }}
+                  </p>
+                  <p class="mt-1 text-xs text-slate-500">
+                    {{ maintenance.dateDebut | date:'dd/MM/yyyy HH:mm' }} - {{ maintenance.typeIntervention || 'INTERNE' }}
+                  </p>
+                </div>
+                <span class="font-mono text-xs text-slate-500">#{{ maintenance.id }}</span>
+              </div>
+
+              <p class="mt-2 text-sm text-slate-600">{{ maintenance.description }}</p>
+
+              <div *ngIf="maintenance.pieces?.length > 0" class="mt-3 space-y-2">
+                <div *ngFor="let piece of maintenance.pieces" class="rounded-md border border-slate-200 bg-white p-3">
+                  <p class="text-sm font-semibold text-slate-950">
+                    {{ piece.piece?.reference }} - {{ piece.piece?.libelle }}
+                  </p>
+                <p class="mt-1 text-xs text-slate-500">
+                  Sortie: {{ piece.quantite }} | Retournee: {{ piece.quantiteRetournee || 0 }} | Restante: {{ piece.quantiteDisponibleRetour || 0 }}
+                </p>
+                <p class="mt-1 text-xs text-slate-500">
+                  Prix moyen utilise: {{ (piece.coutUnitaire || 0) | number:'1.2-2' }} DH | Cout net: {{ (piece.coutNet || 0) | number:'1.2-2' }} DH
+                </p>
+                  <p *ngIf="piece.causeRetour" class="mt-1 text-xs text-slate-500">
+                    Dernier retour: {{ piece.causeRetour }}
+                  </p>
+
+                  <div *ngIf="(piece.quantiteDisponibleRetour || 0) > 0" class="mt-3 space-y-2">
+                    <label class="block">
+                      <span class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Quantite retournee</span>
+                      <input
+                      type="number"
+                      min="1"
+                      [max]="piece.quantiteDisponibleRetour"
+                      [(ngModel)]="retourPieceForms[piece.id].quantite"
+                      class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm text-slate-950"
+                      />
+                    </label>
+                    <label class="block">
+                      <span class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Cause du retour *</span>
+                      <input
+                      [(ngModel)]="retourPieceForms[piece.id].cause"
+                      class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm text-slate-950"
+                      placeholder="Ex: piece non utilisee"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      class="mobile-secondary w-full"
+                      [disabled]="returningPieceId === piece.id || !retourPieceForms[piece.id].cause"
+                      (click)="retournerPiece(piece)"
+                    >
+                      Retourner au stock
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <p *ngIf="!maintenance.pieces || maintenance.pieces.length === 0" class="mt-3 text-sm text-slate-500">
+                Aucune piece de stock utilisee.
+              </p>
+            </div>
+
+            <p *ngIf="maintenances.length === 0" class="py-3 text-center text-sm text-slate-500">
+              Aucune intervention enregistree.
+            </p>
+          </div>
+        </section>
+
+        <section *ngIf="activeTab === 'demandes'" class="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+            <h2 class="text-sm font-semibold text-slate-950">Demande maintenance</h2>
+            <button
+              type="button"
+              class="text-sm font-semibold text-slate-900"
+              (click)="toggleMaintenancePanel()"
+            >
+              {{ showMaintenancePanel ? 'Fermer' : 'Ouvrir' }}
+            </button>
+          </div>
+
+          <div *ngIf="showMaintenancePanel" class="space-y-4 p-4">
+            <div>
+              <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Type de maintenance</p>
+              <div class="space-y-2">
+                <button
+                  *ngFor="let t of typeMaintenances"
+                  type="button"
+                  class="w-full rounded-md border px-4 py-3 text-left text-sm font-semibold"
+                  [ngStyle]="{
+                    'border-color': t.color || '#64748b',
+                    'background-color': t.id === selectedMaintenanceId ? (t.color || '#3b82f6') + '22' : '#ffffff',
+                    'color': '#0f172a'
+                  }"
+                  (click)="selectMaintenanceType(t)"
+                >
+                  {{ t.libelle || t.code }}
+                </button>
+
+                <button
+                  type="button"
+                  class="w-full rounded-md border border-dashed border-slate-400 px-4 py-3 text-left text-sm font-semibold text-slate-700"
+                  (click)="onSelectAutre()"
+                >
+                  Autre type de maintenance
+                </button>
+              </div>
+            </div>
+
+            <div *ngIf="showNewTypeInput">
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Nouveau type
+              </label>
+              <input
+                type="text"
+                [(ngModel)]="newMaintenanceLabel"
+                class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm text-slate-950"
+                placeholder="Ex: Prestation externe"
+              />
+            </div>
+
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Description
+              </label>
+              <textarea
+                rows="4"
+                [(ngModel)]="maintenanceDescription"
+                class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm text-slate-950"
+                placeholder="Decrire le probleme ou la remarque..."
+              ></textarea>
+            </div>
+
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Priorite
+              </label>
+              <select
+                [(ngModel)]="maintenancePriority"
+                class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm text-slate-950"
+              >
+                <option value="FAIBLE">Faible</option>
+                <option value="NORMALE">Normale</option>
+                <option value="URGENTE">Urgente</option>
+                <option value="CRITIQUE">Critique</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Photo optionnelle
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                class="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-sm"
+                (change)="onImageSelected($event)"
+              />
+              <p *ngIf="selectedImageName" class="mt-2 truncate text-xs text-slate-500">{{ selectedImageName }}</p>
+            </div>
+
+            <button
+              type="button"
+              class="w-full rounded-md bg-slate-950 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+              [disabled]="sendingDemande"
+              (click)="onDemandeMaintenance()"
+            >
+              {{ sendingDemande ? 'Envoi en cours...' : 'Envoyer la demande' }}
+            </button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</ion-content>

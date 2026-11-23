@@ -1,0 +1,1120 @@
+<a
+  routerLink="/machines"
+  class="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-teal-600 dark:hover:text-teal-300"
+>
+  Retour a la liste
+</a>
+
+<div
+  *ngIf="machine"
+  class="space-y-6"
+>
+  <div class="space-y-6">
+    <div *ngIf="errorMessage" class="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+      {{ errorMessage }}
+    </div>
+    <div *ngIf="successMessage" class="rounded-md border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+      {{ successMessage }}
+    </div>
+
+    <section class="surface-panel overflow-hidden">
+      <div class="flex flex-col gap-6 p-6 sm:flex-row">
+        <div class="relative shrink-0">
+          <div class="h-32 w-32 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900">
+            <img [src]="getImage()" alt="Machine" class="h-full w-full object-cover" />
+          </div>
+          <div class="absolute -bottom-3 left-3 rounded-md border border-slate-200 bg-white px-2.5 py-1 font-mono text-[11px] text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+            ID #{{ machine.id }}
+          </div>
+        </div>
+
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0">
+              <p class="muted-label">Detail machine</p>
+              <h2 class="mt-1 truncate text-2xl font-bold text-slate-950 dark:text-white">
+                {{ machine.nom }}
+              </h2>
+              <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                Reference :
+                <span class="font-mono text-slate-800 dark:text-slate-100">{{ machine.ref }}</span>
+              </p>
+              <p class="mt-2 text-sm text-slate-500 dark:text-slate-400" *ngIf="lastUpdate">
+                Derniere mise a jour :
+                <span class="font-mono text-slate-800 dark:text-slate-200">{{ lastUpdate | date:'dd/MM/yyyy HH:mm' }}</span>
+              </p>
+            </div>
+
+            <span
+              class="inline-flex shrink-0 items-center gap-2 rounded-md border px-3 py-1 text-sm font-semibold"
+              [ngStyle]="getMachineBadgeStyle(machine)"
+            >
+              <span class="h-2.5 w-2.5 rounded-full" [ngStyle]="getMachineDotStyle(machine)"></span>
+              {{ getMachineStateLabel(machine) }}
+            </span>
+            <button *ngIf="auth.peutFaire('RAPPORT_CONSULTER')"
+              type="button"
+              class="secondary-action"
+              (click)="openMachineHistoryExport()"
+            >
+              Export historique
+            </button>
+            <button *ngIf="auth.peutFaire('RAPPORT_CONSULTER')"
+              type="button"
+              class="primary-action"
+              (click)="openMachineHistoryReport()"
+            >
+              Rapport PDF
+            </button>
+          </div>
+
+          <div class="mt-6 grid gap-4 sm:grid-cols-2">
+            <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/80">
+              <p class="muted-label">Action actuelle</p>
+              <p class="mt-2 text-base font-semibold text-slate-950 dark:text-white">
+                {{ getMachineStateLabel(machine) }}
+              </p>
+              <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                Depuis
+                <span class="font-mono">{{ machine.dateDebutAction | date:'dd/MM/yyyy HH:mm' }}</span>
+              </p>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 rounded-lg border border-slate-800 bg-slate-950 px-4 py-4 text-white">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Temps ecoule</p>
+                <p class="mt-2 font-mono text-2xl text-teal-300">{{ getElapsedCurrent() }}</p>
+              </div>
+              <div class="flex h-14 w-14 items-center justify-center rounded-lg border border-teal-400/50 bg-teal-400/10">
+                <span class="font-mono text-[11px] text-teal-200">LIVE</span>
+              </div>
+            </div>
+
+            <div class="rounded-lg border border-teal-200 bg-teal-50 px-4 py-4 dark:border-teal-900/60 dark:bg-teal-950/30">
+              <p class="muted-label text-teal-700 dark:text-teal-200">Code machine</p>
+              <p class="mt-2 break-all font-mono text-sm font-semibold text-slate-950 dark:text-white">{{ getMachineQrValue() }}</p>
+              <p class="mt-2 break-all text-xs text-slate-500 dark:text-slate-400">{{ getMachineDetailUrl() }}</p>
+            </div>
+          </div>
+
+          <div class="mt-4 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900 md:grid-cols-3">
+            <div>
+              <p class="muted-label">Emplacement</p>
+              <p class="mt-1 font-semibold text-slate-900 dark:text-white">{{ machine.emplacement || 'Non precise' }}</p>
+            </div>
+            <div>
+              <p class="muted-label">Fabricant / modele</p>
+              <p class="mt-1 font-semibold text-slate-900 dark:text-white">{{ machine.fabricant || '-' }} {{ machine.modele || '' }}</p>
+            </div>
+            <div>
+              <p class="muted-label">Numero serie</p>
+              <p class="mt-1 font-mono text-slate-900 dark:text-white">{{ machine.numeroSerie || '-' }}</p>
+            </div>
+            <div>
+              <p class="muted-label">Installation</p>
+              <p class="mt-1 text-slate-900 dark:text-white">{{ machine.dateInstallation | date:'dd/MM/yyyy' }}</p>
+            </div>
+            <div>
+              <p class="muted-label">Criticite</p>
+              <p class="mt-1 font-semibold text-slate-900 dark:text-white">{{ machine.criticite || 'Normale' }}</p>
+            </div>
+            <div>
+              <p class="muted-label">Heures marche</p>
+              <p class="mt-1 font-mono text-slate-900 dark:text-white">{{ machine.heuresMarche || 0 }} h</p>
+            </div>
+            <div class="md:col-span-3" *ngIf="machine.commentaireTechnique">
+              <p class="muted-label">Commentaire technique</p>
+              <p class="mt-1 text-slate-700 dark:text-slate-300">{{ machine.commentaireTechnique }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section *ngIf="indicators" class="grid gap-4 md:grid-cols-5">
+      <div class="surface-panel p-4">
+        <p class="muted-label">Disponibilite</p>
+        <p class="mt-3 text-2xl font-bold text-emerald-600 dark:text-emerald-300">
+          {{ indicators.availabilityPercent | number:'1.0-1' }}%
+        </p>
+        <span class="mt-3 inline-flex rounded-md border px-2 py-1 text-xs font-semibold" [ngClass]="getReplacementClasses(indicators.availabilityRecommendationLevel)">
+          {{ indicators.availabilityRecommendation }}
+        </span>
+      </div>
+
+      <div class="surface-panel p-4">
+        <p class="muted-label">Temps moyen entre deux pannes</p>
+        <p class="mt-3 text-2xl font-bold text-sky-600 dark:text-sky-300">
+          {{ getAverageBetweenFailuresLabel(indicators) }}
+        </p>
+        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+          {{ getAverageBetweenFailuresHelp(indicators) }}
+        </p>
+      </div>
+
+      <div class="surface-panel p-4">
+        <p class="muted-label">Temps moyen de reparation</p>
+        <p class="mt-3 text-2xl font-bold text-amber-600 dark:text-amber-300">
+          {{ getAverageRepairTimeLabel(indicators) }}
+        </p>
+        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+          {{ getAverageRepairTimeHelp(indicators) }}
+        </p>
+        <span class="mt-3 inline-flex rounded-md border px-2 py-1 text-xs font-semibold" [ngClass]="getReplacementClasses(indicators.repairTimeRecommendationLevel)">
+          {{ indicators.repairTimeRecommendation }}
+        </span>
+      </div>
+
+      <div class="surface-panel p-4">
+        <p class="muted-label">Pannes</p>
+        <p class="mt-3 text-2xl font-bold text-red-600 dark:text-red-300">
+          {{ indicators.failureCount }}
+        </p>
+        <span class="mt-3 inline-flex rounded-md border px-2 py-1 text-xs font-semibold" [ngClass]="getReplacementClasses(indicators.failureRecommendationLevel)">
+          {{ indicators.failureRecommendation }}
+        </span>
+      </div>
+
+      <div class="surface-panel p-4">
+        <p class="muted-label">Temps d'arret</p>
+        <p class="mt-3 text-xl font-bold text-slate-950 dark:text-white">
+          {{ formatIndicatorDuration(indicators.downtimeMinutes) }}
+        </p>
+        <span class="mt-3 inline-flex rounded-md border px-2 py-1 text-xs font-semibold" [ngClass]="getReplacementClasses(indicators.downtimeRecommendationLevel)">
+          {{ indicators.downtimeRecommendation }}
+        </span>
+      </div>
+    </section>
+
+    <section class="surface-panel overflow-hidden">
+      <div class="flex flex-col gap-4 border-b border-blue-100 px-6 py-5 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p class="muted-label">Assistant IA local</p>
+          <h3 class="mt-1 text-lg font-semibold text-slate-950 dark:text-white">Diagnostic maintenance avec Ollama</h3>
+          <p class="mt-1 text-sm text-slate-500">
+            L IA analyse l etat actuel, les demandes, les interventions, les pieces utilisees, les couts et les indicateurs de cette machine.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" class="secondary-action" (click)="testAiModel()" [disabled]="aiTestLoading || aiDiagnosticLoading">
+            {{ aiTestLoading ? 'Test en cours...' : 'Tester Ollama' }}
+          </button>
+          <button type="button" class="primary-action" (click)="runAiDiagnostic()" [disabled]="aiDiagnosticLoading || aiTestLoading">
+            {{ aiDiagnosticLoading ? 'Analyse en cours...' : 'Lancer diagnostic IA' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="p-6">
+        <div *ngIf="!aiDiagnostic && !aiDiagnosticLoading && !aiTestLoading" class="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
+          Le diagnostic IA ne remplace pas la decision du responsable maintenance. Il aide a prioriser les controles et a mieux lire les donnees.
+        </div>
+
+        <div *ngIf="aiDiagnosticLoading || aiTestLoading" class="rounded-lg border border-orange-100 bg-orange-50 p-4 text-sm font-semibold text-orange-800">
+          Ollama prepare le diagnostic. Le premier appel peut prendre quelques secondes selon le modele local.
+        </div>
+
+        <div *ngIf="aiDiagnostic" class="space-y-4">
+          <div class="flex flex-wrap gap-2 text-xs font-semibold">
+            <span class="rounded-md bg-blue-50 px-2.5 py-1 text-blue-700">Provider : {{ aiDiagnostic.provider }}</span>
+            <span class="rounded-md bg-orange-50 px-2.5 py-1 text-orange-700">Modele : {{ aiDiagnostic.model || '-' }}</span>
+            <span class="rounded-md bg-slate-100 px-2.5 py-1 text-slate-700">Statut : {{ aiDiagnostic.status }}</span>
+          </div>
+          <div *ngIf="aiDiagnostic.sections?.length; else rawAiDiagnostic" class="grid gap-3 md:grid-cols-2">
+            <div *ngFor="let section of aiDiagnostic.sections" class="rounded-lg border border-blue-100 bg-blue-50/60 p-4">
+              <p class="text-sm font-bold text-blue-900">{{ section.title }}</p>
+              <p class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">{{ section.content }}</p>
+            </div>
+          </div>
+          <ng-template #rawAiDiagnostic>
+            <div class="whitespace-pre-line rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+              {{ aiDiagnostic.diagnostic }}
+            </div>
+          </ng-template>
+        </div>
+
+        <div class="mt-6 rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+          <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+            <p class="font-semibold text-slate-950 dark:text-white">Chatbot maintenance</p>
+            <p class="mt-1 text-xs text-slate-500">Le contexte de cette machine est ajoute automatiquement en arriere-plan.</p>
+          </div>
+          <div class="max-h-[360px] space-y-3 overflow-y-auto p-4">
+            <div
+              *ngFor="let message of aiChatMessages"
+              class="flex"
+              [class.justify-end]="message.role === 'USER'"
+              [class.justify-start]="message.role === 'AI'"
+            >
+              <div
+                class="max-w-[88%] rounded-lg px-4 py-3 text-sm leading-6"
+                [class.bg-orange-600]="message.role === 'USER'"
+                [class.text-white]="message.role === 'USER'"
+                [class.bg-blue-50]="message.role === 'AI'"
+                [class.text-slate-800]="message.role === 'AI'"
+              >
+                <div *ngIf="message.sections?.length; else rawChatMessage" class="space-y-3">
+                  <div *ngFor="let section of message.sections">
+                    <p class="font-bold text-blue-900">{{ section.title }}</p>
+                    <p class="mt-1 whitespace-pre-line">{{ section.content }}</p>
+                  </div>
+                </div>
+                <ng-template #rawChatMessage>
+                  <p class="whitespace-pre-line">{{ message.content }}</p>
+                </ng-template>
+              </div>
+            </div>
+            <div *ngIf="aiChatLoading" class="text-sm font-semibold text-orange-700">
+              L assistant prepare la reponse...
+            </div>
+          </div>
+          <form class="flex gap-2 border-t border-slate-200 p-4 dark:border-slate-800" (ngSubmit)="sendAiChatMessage()">
+            <input
+              class="form-control"
+              name="aiChatInput"
+              [(ngModel)]="aiChatInput"
+              placeholder="Exemple: quelles actions recommandes-tu pour cette machine ?"
+              [disabled]="aiChatLoading"
+            />
+            <button type="submit" class="primary-action shrink-0" [disabled]="aiChatLoading || !aiChatInput.trim()">
+              Envoyer
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+<!-- ─── ML PREDICTION SECTION ─────────────────────── -->
+<section class="surface-panel overflow-hidden">
+  <div class="flex flex-col gap-4 border-b border-purple-100 px-6 py-5 md:flex-row md:items-start md:justify-between">
+    <div>
+      <p class="muted-label">Prédiction Machine Learning</p>
+      <h3 class="mt-1 text-lg font-semibold text-slate-950 dark:text-white">Score de risque de panne à 7 jours</h3>
+      <p class="mt-1 text-sm text-slate-500">
+        Random Forest entraîné sur 24 mois de données simulées (capteurs, pannes, maintenance). Preuve de concept à valider sur données réelles.
+      </p>
+    </div>
+    <button type="button" class="primary-action" (click)="loadMlPrediction()" [disabled]="mlPredictionLoading">
+      {{ mlPredictionLoading ? 'Analyse en cours...' : 'Lancer prédiction ML' }}
+    </button>
+  </div>
+
+  <div class="p-6">
+    <div *ngIf="!mlPrediction && !mlPredictionLoading && !mlPredictionError"
+         class="rounded-lg border border-purple-100 bg-purple-50 p-4 text-sm text-purple-800">
+      Cliquez sur "Lancer prédiction ML" pour estimer le risque de panne dans les 7 prochains jours.
+    </div>
+
+    <div *ngIf="mlPredictionLoading"
+         class="rounded-lg border border-purple-100 bg-purple-50 p-4 text-sm font-semibold text-purple-800">
+      Analyse en cours...
+    </div>
+
+    <div *ngIf="mlPredictionError"
+         class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      {{ mlPredictionError }}
+    </div>
+
+    <div *ngIf="mlPrediction && !mlPrediction.error" class="space-y-5">
+      <div class="grid gap-4 md:grid-cols-2">
+
+        <div class="rounded-lg border border-slate-200 p-5 dark:border-slate-800">
+          <p class="text-sm text-slate-500">Score de risque (0 à 100)</p>
+          <p class="mt-2 text-4xl font-bold" [ngClass]="getMlRiskClass()">{{ mlPrediction.probability }}</p>
+          <div class="relative mt-3 h-3 w-full rounded-full bg-slate-100 dark:bg-slate-800">
+            <div class="h-3 rounded-full" [style.width.%]="mlPrediction.probability"
+                 [style.background-color]="getMlProgressColor()"></div>
+            <div class="absolute h-5 bg-slate-900" style="top:-4px; width:2px;"
+                 [style.left.%]="mlPrediction.modelMetrics.seuil * 100"></div>
+          </div>
+          <p class="mt-2 text-xs text-slate-500">
+            Trait noir : seuil d'alerte validé ({{ mlPrediction.modelMetrics.seuil * 100 | number:'1.0-0' }}).
+            Ce score n'est pas une probabilité calibrée.
+          </p>
+          <p class="mt-2 text-sm font-semibold" [ngClass]="getMlRiskClass()">{{ mlPrediction.riskLevel }}</p>
+        </div>
+
+        <div class="rounded-lg border border-slate-200 p-5 dark:border-slate-800">
+          <p class="text-sm text-slate-500">Recommandation</p>
+          <p class="mt-2 text-sm font-semibold text-slate-900 dark:text-white">{{ mlPrediction.recommendation }}</p>
+          <div class="mt-4 space-y-1 text-xs text-slate-500">
+            <p>Données au {{ mlPrediction.asOf }}</p>
+            <p>PR-AUC (test) : {{ mlPrediction.modelMetrics.pr_auc | number:'1.2-2' }}</p>
+            <p>
+              Précision des alertes : {{ mlPrediction.modelMetrics.precision * 100 | number:'1.0-0' }} %
+              · Rappel : {{ mlPrediction.modelMetrics.recall * 100 | number:'1.0-0' }} %
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="mlPrediction.topFactors" class="rounded-lg border border-slate-200 p-5 dark:border-slate-800">
+        <p class="text-sm font-semibold text-slate-900 dark:text-white">Pourquoi ce score ?</p>
+        <p class="text-xs text-slate-500">
+          Contribution de chaque variable au score de cet équipement (valeurs de Shapley).
+          En rouge : ce qui augmente le risque. En vert : ce qui le diminue.
+        </p>
+        <div class="mt-3 space-y-3">
+          <div *ngFor="let factor of mlPrediction.topFactors" class="space-y-1">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-600 dark:text-slate-300">{{ getFactorLabel(factor.name) }}</span>
+              <span class="font-mono font-semibold"
+                    [ngClass]="factor.effect === 'hausse' ? 'text-red-600' : 'text-emerald-600'">
+                {{ factor.contribution > 0 ? '+' : '' }}{{ factor.contribution }} pts · valeur : {{ factor.value }}
+              </span>
+            </div>
+            <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800">
+              <div class="h-2 rounded-full"
+                   [style.width.%]="factor.importance * 3"
+                   [style.background-color]="factor.effect === 'hausse' ? '#dc2626' : '#16a34a'"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+<!-- ─── DECISION ECONOMIQUE ───────────────────────── -->
+<section *ngIf="mlPrediction?.economics as eco" class="surface-panel p-6">
+  <p class="muted-label">Aide à la décision</p>
+  <h3 class="mt-1 text-lg font-semibold text-slate-950 dark:text-white">Décision économique</h3>
+  <p class="mt-1 text-sm text-slate-500">Coûts calculés sur l'historique simulé de cet équipement (réparation seulement, hors ventes perdues).</p>
+  <div class="mt-4 grid gap-4 md:grid-cols-3">
+    <div class="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+      <p class="text-xs text-slate-500">Coût moyen d'une panne</p>
+      <p class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ eco.cout_panne_moyen | number:'1.0-0' }} DH</p>
+      <p class="text-xs text-slate-500">estimé sur {{ eco.nb_pannes }} panne(s)</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+      <p class="text-xs text-slate-500">Coût moyen d'une visite préventive</p>
+      <p class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ eco.cout_visite_moyen | number:'1.0-0' }} DH</p>
+      <p class="text-xs text-slate-500">estimé sur {{ eco.nb_visites }} intervention(s)</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+      <p class="text-xs text-slate-500">Seuil de rentabilité</p>
+      <p class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ eco.seuil_rentabilite_pct }} %</p>
+      <p class="text-xs text-slate-500">part minimale d'alertes justes pour qu'une visite soit rentable</p>
+    </div>
+  </div>
+  <div class="mt-4 rounded-lg border p-4 text-sm leading-6" [ngClass]="getEconomicClass()">{{ getEconomicConclusion() }}</div>
+  <p class="mt-3 text-xs text-slate-500">Hypothèses : une visite faite à temps évite la panne ; les coûts viennent de la simulation, pas de données réelles.</p>
+</section>
+
+<!-- ─── COURBE DU SCORE (periode de test) ─────────── -->
+<section *ngIf="mlChart" class="surface-panel p-6">
+  <p class="muted-label">Validation visuelle</p>
+  <h3 class="mt-1 text-lg font-semibold text-slate-950 dark:text-white">Évolution du score sur la période de test</h3>
+  <p class="mt-1 text-sm text-slate-500">
+    Du {{ mlChart.first }} au {{ mlChart.last }} : période jamais vue par le modèle pendant son entraînement.
+    Chaque trait rouge est une vraie panne de cet équipement.
+  </p>
+  <svg viewBox="0 0 800 210" class="mt-4 w-full">
+    <line x1="10" x2="790" y1="190" y2="190" stroke="#cbd5e1" />
+    <line x1="10" x2="790" [attr.y1]="mlChart.thr" [attr.y2]="mlChart.thr" stroke="#0f172a" stroke-dasharray="4 4" />
+    <line *ngFor="let fx of mlChart.failures" [attr.x1]="fx" [attr.x2]="fx" y1="10" y2="190" stroke="#dc2626" stroke-width="2" />
+    <polyline [attr.points]="mlChart.line" fill="none" stroke="#7c3aed" stroke-width="2" />
+  </svg>
+  <p class="mt-2 text-xs text-slate-500">
+    Ligne violette : score de risque. Pointillé noir : seuil d'alerte. Trait rouge : panne réelle.
+    Exemple choisi : à juger avec les métriques globales, pas sur un seul équipement.
+  </p>
+</section>
+<!-- ─── RAPPORT REDIGE PAR OLLAMA ─────────────────── -->
+<section class="surface-panel p-6">
+  <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+    <div>
+      <p class="muted-label">Rapport automatique</p>
+      <h3 class="mt-1 text-lg font-semibold text-slate-950 dark:text-white">Rapport rédigé à partir du score</h3>
+      <p class="mt-1 text-sm text-slate-500">
+        Texte rédigé par un modèle de langage local (Ollama) à partir des résultats du modèle ML.
+        Il peut contenir des imprécisions : les chiffres de référence sont ceux affichés plus haut.
+      </p>
+    </div>
+    <button type="button" class="secondary-action" (click)="loadMlReport()" [disabled]="mlReportLoading">
+      {{ mlReportLoading ? 'Rédaction en cours...' : 'Générer le rapport' }}
+    </button>
+  </div>
+
+  <div *ngIf="mlReportLoading" class="mt-4 rounded-lg border border-orange-100 bg-orange-50 p-4 text-sm font-semibold text-orange-800">
+    Le modèle de langage rédige le rapport. Cela peut prendre une à deux minutes la première fois.
+  </div>
+
+  <div *ngIf="mlReportError" class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+    {{ mlReportError }}
+  </div>
+
+  <div *ngIf="mlReport" class="mt-4 whitespace-pre-line rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+    {{ cleanReport(mlReport.report) }}
+  </div>
+
+  <p class="mt-3 text-xs text-slate-500">
+    Niveau ATTENTION : score au-dessus de la moitié du seuil d'alerte. Niveau CRITIQUE : au-dessus du seuil.
+  </p>
+</section>
+    
+
+    <section *ngIf="indicators" class="surface-panel p-5">
+      <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p class="muted-label">Aide a la decision</p>
+          <h3 class="mt-1 text-lg font-semibold text-slate-950 dark:text-white">Analyse remplacement machine</h3>
+          <p class="mt-1 text-sm text-slate-500">
+            Comparaison entre le cout maintenance cumule et le cout total d'investissement.
+          </p>
+        </div>
+        <span class="inline-flex rounded-md border px-3 py-2 text-sm font-semibold" [ngClass]="getReplacementClasses(indicators.replacementRecommendationLevel)">
+          {{ indicators.replacementRecommendation }}
+        </span>
+      </div>
+
+      <div class="mt-4 grid gap-4 md:grid-cols-4">
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/80">
+          <p class="muted-label">Investissement machine</p>
+          <p class="mt-2 font-mono text-xl font-bold text-slate-950 dark:text-white">{{ formatMoney(indicators.investmentCost) }}</p>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/80">
+          <p class="muted-label">Maintenance cumulee</p>
+          <p class="mt-2 font-mono text-xl font-bold text-slate-950 dark:text-white">{{ formatMoney(indicators.maintenanceCost) }}</p>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/80">
+          <p class="muted-label">Ratio maintenance / machine</p>
+          <p class="mt-2 font-mono text-xl font-bold text-slate-950 dark:text-white">{{ indicators.replacementRatioPercent | number:'1.0-1' }}%</p>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-300">
+          <p class="font-semibold text-slate-900 dark:text-white">Seuils de lecture</p>
+          <p class="mt-2">Sous {{ indicators.seuilRemplacementSurveillancePercent | number:'1.0-1' }}%: conserver</p>
+          <p>Des {{ indicators.seuilRemplacementSurveillancePercent | number:'1.0-1' }}%: surveiller</p>
+          <p>Des {{ indicators.seuilRemplacementAttentionPercent | number:'1.0-1' }}%: etudier remplacement</p>
+          <p>Des {{ indicators.seuilRemplacementCritiquePercent | number:'1.0-1' }}%: remplacement recommande</p>
+        </div>
+      </div>
+    </section>
+
+    <section *ngIf="indicators" class="surface-panel p-5">
+      <p class="muted-label">Parametrage machine</p>
+      <h3 class="mt-1 text-lg font-semibold text-slate-950 dark:text-white">Seuils utilises pour les alertes</h3>
+      <div class="mt-4 grid gap-3 md:grid-cols-2">
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-950/80">
+          <p class="font-semibold text-slate-900 dark:text-white">Disponibilite</p>
+          <p class="mt-2 text-slate-600 dark:text-slate-300">Attention sous {{ indicators.seuilDisponibiliteAttentionPercent | number:'1.0-1' }}%</p>
+          <p class="text-slate-600 dark:text-slate-300">Critique sous {{ indicators.seuilDisponibiliteCritiquePercent | number:'1.0-1' }}%</p>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-950/80">
+          <p class="font-semibold text-slate-900 dark:text-white">Temps d'arret</p>
+          <p class="mt-2 text-slate-600 dark:text-slate-300">Attention des {{ formatIndicatorDuration(indicators.seuilTempsArretAttentionMinutes) }}</p>
+          <p class="text-slate-600 dark:text-slate-300">Critique des {{ formatIndicatorDuration(indicators.seuilTempsArretCritiqueMinutes) }}</p>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-950/80">
+          <p class="font-semibold text-slate-900 dark:text-white">Pannes</p>
+          <p class="mt-2 text-slate-600 dark:text-slate-300">Attention des {{ indicators.seuilPannesAttention }} panne(s)</p>
+          <p class="text-slate-600 dark:text-slate-300">Critique des {{ indicators.seuilPannesCritique }} panne(s)</p>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-950/80">
+          <p class="font-semibold text-slate-900 dark:text-white">Temps moyen de reparation</p>
+          <p class="mt-2 text-slate-600 dark:text-slate-300">Attention des {{ indicators.seuilTempsReparationAttentionHours | number:'1.0-1' }} h</p>
+          <p class="text-slate-600 dark:text-slate-300">Critique des {{ indicators.seuilTempsReparationCritiqueHours | number:'1.0-1' }} h</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="surface-panel p-6">
+      <div class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p class="muted-label">Historique</p>
+          <h3 class="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
+            Actions de la machine
+          </h3>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 text-sm">
+          <label class="block">
+            <span class="mb-1 block text-xs text-slate-500">Du</span>
+            <input
+              type="date"
+              class="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-teal-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              [(ngModel)]="fromDate"
+              (change)="onFilterChange()"
+            />
+          </label>
+          <label class="block">
+            <span class="mb-1 block text-xs text-slate-500">Au</span>
+            <input
+              type="date"
+              class="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-teal-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              [(ngModel)]="toDate"
+              (change)="onFilterChange()"
+            />
+          </label>
+        </div>
+      </div>
+
+      <div *ngIf="timelineSegments.length > 0" class="mb-5">
+        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          Chronologie des etats sur la periode
+        </p>
+        <div class="h-5 w-full overflow-hidden rounded-md border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900">
+          <div class="flex h-full">
+            <div
+              *ngFor="let seg of timelineSegments"
+              class="h-full"
+              [style.width.%]="seg.widthPercent"
+              [style.backgroundColor]="seg.color"
+              [title]="seg.label"
+            ></div>
+          </div>
+        </div>
+        <div class="mt-1 flex justify-between font-mono text-[11px] text-slate-500 dark:text-slate-500" *ngIf="timelineFrom && timelineTo">
+          <span>{{ timelineFrom | date:'dd/MM HH:mm' }}</span>
+          <span>{{ timelineTo | date:'dd/MM HH:mm' }}</span>
+        </div>
+      </div>
+
+      <div class="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/80">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-100 text-slate-600 dark:bg-slate-900/90 dark:text-slate-400">
+          <tr>
+            <th class="px-4 py-3 text-left font-semibold">Action</th>
+            <th class="px-4 py-3 text-left font-semibold">Debut</th>
+            <th class="px-4 py-3 text-left font-semibold">Fin</th>
+            <th class="px-4 py-3 text-left font-semibold">Duree</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr
+            *ngFor="let action of actions"
+            class="border-t border-slate-200 hover:bg-slate-100 dark:border-slate-800/80 dark:hover:bg-slate-900/70"
+          >
+            <td class="px-4 py-3 text-slate-950 dark:text-white">
+              {{ action.typeAction.libelle || action.typeAction.code }}
+            </td>
+            <td class="px-4 py-3 font-mono text-slate-700 dark:text-slate-300">
+              {{ action.dateDebut | date:'dd/MM/yyyy HH:mm' }}
+            </td>
+            <td class="px-4 py-3 font-mono text-slate-700 dark:text-slate-300">
+              {{ action.dateFin ? (action.dateFin | date:'dd/MM/yyyy HH:mm') : 'En cours' }}
+            </td>
+            <td class="px-4 py-3 text-slate-950 dark:text-white">
+              {{ durationToString(action.dateDebut, action.dateFin) }}
+            </td>
+          </tr>
+          <tr *ngIf="actions.length === 0">
+            <td colspan="4" class="px-4 py-5 text-center text-sm text-slate-500">
+              Aucune action pour cette periode.
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section *ngIf="auth.peutFaire('MACHINE_CHANGER_ETAT')" class="surface-panel p-6">
+      <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p class="muted-label">Operation terrain</p>
+          <h3 class="mt-1 text-lg font-semibold text-slate-950 dark:text-white">Changer l'etat</h3>
+          <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Etat actuel de la machine avant changement.</p>
+        </div>
+        <span
+          class="inline-flex shrink-0 items-center gap-2 rounded-md border px-3 py-1 text-sm font-semibold"
+          [ngStyle]="getMachineBadgeStyle(machine)"
+        >
+          <span class="h-2.5 w-2.5 rounded-full" [ngStyle]="getMachineDotStyle(machine)"></span>
+          {{ getMachineStateLabel(machine) }}
+        </span>
+      </div>
+      <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        <button
+          *ngFor="let type of typeActions"
+          type="button"
+          class="rounded-md border px-3 py-2 text-left text-sm font-semibold transition disabled:cursor-not-allowed"
+          [disabled]="machine.typeAction?.id === type.id"
+          [ngClass]="machine.typeAction?.id === type.id ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300' : 'bg-white text-slate-800 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800'"
+          [ngStyle]="{ 'border-color': type.color || '#64748b' }"
+          (click)="changeMachineState(type)"
+        >
+          <span class="mr-2 inline-block h-2.5 w-2.5 rounded-full" [style.backgroundColor]="type.color || '#64748b'"></span>
+          {{ type.libelle || type.code }}
+          <span *ngIf="machine.typeAction?.id === type.id" class="ml-2 text-xs font-medium">(actuel)</span>
+        </button>
+      </div>
+    </section>
+
+    <section *ngIf="auth.peutFaire('DEMANDE_CREER')" class="surface-panel p-6">
+      <div class="mb-4">
+        <p class="muted-label">Demande</p>
+        <h3 class="mt-1 text-lg font-semibold text-slate-950 dark:text-white">Creer une demande</h3>
+      </div>
+      <div class="grid gap-3 md:grid-cols-2">
+        <select class="form-control" [(ngModel)]="demandeForm.typeMaintenanceId">
+          <option [ngValue]="undefined">Choisir un type</option>
+          <option *ngFor="let type of typeMaintenances" [ngValue]="type.id">{{ type.libelle || type.code }}</option>
+        </select>
+        <input class="form-control" [(ngModel)]="demandeForm.nouveauTypeLibelle" placeholder="Ou nouveau type" />
+        <select class="form-control" [(ngModel)]="demandeForm.priorite">
+          <option value="FAIBLE">Faible</option>
+          <option value="NORMALE">Normale</option>
+          <option value="URGENTE">Urgente</option>
+          <option value="CRITIQUE">Critique</option>
+        </select>
+        <input type="file" class="block w-full text-sm text-slate-600" (change)="onDemandeImageSelected($event)" />
+        <textarea class="form-control md:col-span-2" rows="3" [(ngModel)]="demandeForm.description" placeholder="Description de la demande"></textarea>
+      </div>
+      <button type="button" class="primary-action mt-4" [disabled]="creatingDemande" (click)="createDemandeMaintenance()">
+        {{ creatingDemande ? 'Creation...' : 'Creer demande' }}
+      </button>
+    </section>
+
+    <section *ngIf="auth.peutFaire('INTERVENTION_CREER')" class="surface-panel p-6">
+      <div class="mb-4">
+        <p class="muted-label">Maintenance</p>
+        <h3 class="mt-1 text-lg font-semibold text-slate-950 dark:text-white">Nouvelle intervention</h3>
+      </div>
+      <div class="grid gap-3 md:grid-cols-2">
+        <select class="form-control" [(ngModel)]="interventionForm.demandeMaintenanceId">
+          <option [ngValue]="undefined">Sans demande liee</option>
+          <option *ngFor="let demande of demandes" [ngValue]="demande.id">#{{ demande.id }} - {{ demande.typeMaintenance?.libelle || demande.description }}</option>
+        </select>
+        <select class="form-control" [(ngModel)]="interventionForm.typeIntervention">
+          <option value="INTERNE">Interne</option>
+          <option value="EXTERNE">Externe</option>
+        </select>
+        <select class="form-control" [(ngModel)]="interventionForm.typeMaintenanceId">
+          <option [ngValue]="undefined">Type intervention</option>
+          <option *ngFor="let type of typeMaintenances" [ngValue]="type.id">{{ type.libelle || type.code }}</option>
+        </select>
+        <input class="form-control" [(ngModel)]="interventionForm.nouveauTypeLibelle" placeholder="Ou nouveau type" />
+        <textarea class="form-control md:col-span-2" rows="3" [(ngModel)]="interventionForm.description" placeholder="Description intervention"></textarea>
+        <input class="form-control" [(ngModel)]="interventionForm.causePanne" placeholder="Cause panne" />
+        <input class="form-control" type="number" min="0" step="0.01" [(ngModel)]="interventionForm.cout" placeholder="Cout main d'oeuvre / prestation" />
+      </div>
+
+      <div *ngIf="interventionForm.typeIntervention === 'EXTERNE'" class="mt-4 grid gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 md:grid-cols-2">
+        <input class="form-control" [(ngModel)]="interventionForm.fournisseurNom" placeholder="Fournisseur *" />
+        <input class="form-control" [(ngModel)]="interventionForm.fournisseurContact" placeholder="Contact" />
+        <input class="form-control" [(ngModel)]="interventionForm.fournisseurTelephone" placeholder="Telephone" />
+        <input class="form-control" [(ngModel)]="interventionForm.fournisseurEmail" placeholder="Email" />
+        <input class="form-control" [(ngModel)]="interventionForm.referenceDevis" placeholder="Reference devis" />
+        <textarea class="form-control md:col-span-2" rows="2" [(ngModel)]="interventionForm.messageDemandeExterne" placeholder="Message externe"></textarea>
+      </div>
+
+      <div class="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
+        <p class="mb-2 text-sm font-semibold text-slate-900">Pieces utilisees</p>
+        <div class="grid gap-2 md:grid-cols-[minmax(0,1fr)_100px_auto]">
+          <select class="form-control" [(ngModel)]="selectedPieceId">
+            <option [ngValue]="undefined">Piece compatible</option>
+            <option *ngFor="let piece of piecesCompatibles" [ngValue]="piece.id">{{ piece.reference }} - {{ piece.libelle }} ({{ piece.quantite }})</option>
+          </select>
+          <input class="form-control" type="number" min="1" [(ngModel)]="selectedPieceQuantity" />
+          <button type="button" class="secondary-action" (click)="addPieceIntervention()">Ajouter piece</button>
+        </div>
+        <div *ngIf="piecesIntervention.length > 0" class="mt-2 flex flex-wrap gap-2">
+          <span *ngFor="let piece of piecesIntervention" class="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold">
+            {{ piece.label }} x{{ piece.quantite }}
+            <button type="button" class="ml-2 text-red-600" (click)="removePieceIntervention(piece.pieceId)">Retirer</button>
+          </span>
+        </div>
+      </div>
+
+      <div class="mt-4 grid gap-2 md:grid-cols-3">
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" [(ngModel)]="interventionForm.controleEffectue" /> Controle effectue</label>
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" [(ngModel)]="interventionForm.nettoyageEffectue" /> Nettoyage effectue</label>
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" [(ngModel)]="interventionForm.testFinalEffectue" /> Test final OK</label>
+        <textarea class="form-control md:col-span-3" rows="2" [(ngModel)]="interventionForm.checklist" placeholder="Checklist detaillee"></textarea>
+        <textarea class="form-control md:col-span-3" rows="2" [(ngModel)]="interventionForm.note" placeholder="Commentaire"></textarea>
+        <input class="form-control md:col-span-3" [(ngModel)]="interventionForm.validationSignature" placeholder="Signature / validation" />
+        <label class="block text-xs text-slate-500">Photo avant <input type="file" class="mt-1 block w-full" (change)="onInterventionBeforeImageSelected($event)" /></label>
+        <label class="block text-xs text-slate-500">Photo apres <input type="file" class="mt-1 block w-full" (change)="onInterventionAfterImageSelected($event)" /></label>
+      </div>
+
+      <button type="button" class="primary-action mt-4" [disabled]="creatingIntervention" (click)="createIntervention()">
+        {{ creatingIntervention ? 'Enregistrement...' : 'Enregistrer intervention' }}
+      </button>
+    </section>
+  </div>
+
+  <div class="space-y-6">
+    <section class="surface-panel p-6">
+      <h3 class="text-lg font-semibold text-slate-950 dark:text-white">
+        Repartition du temps
+      </h3>
+
+      <div *ngIf="stats.length > 0; else noStats" class="mt-5 space-y-4">
+        <div *ngFor="let s of stats" class="flex items-center gap-4">
+          <div class="relative h-16 w-16 shrink-0">
+            <div class="absolute inset-0 rounded-full border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900"></div>
+            <div class="absolute inset-0 rounded-full" [ngStyle]="getConicStyle(s.percentage, s.color)"></div>
+            <div class="absolute inset-2 flex items-center justify-center rounded-full bg-white dark:bg-slate-950">
+              <span class="text-xs font-semibold text-slate-800 dark:text-slate-100">
+                {{ s.percentage | number:'1.0-0' }}%
+              </span>
+            </div>
+          </div>
+
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center justify-between gap-3">
+              <p class="truncate text-sm font-semibold text-slate-950 dark:text-white">
+                {{ s.label }}
+              </p>
+              <p class="font-mono text-xs text-slate-500 dark:text-slate-400">
+                {{ (s.durationMs / 3600000) | number:'1.1-1' }} h
+              </p>
+            </div>
+            <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+              <div class="h-full rounded-full" [style.width.%]="s.percentage" [style.backgroundColor]="s.color"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #noStats>
+        <p class="mt-3 text-sm text-slate-500">
+          Pas encore de donnees d'actions pour cette periode.
+        </p>
+      </ng-template>
+    </section>
+
+    <section class="surface-panel p-6">
+      <div class="mb-3 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-slate-950 dark:text-white">
+          Demandes de maintenance
+        </h3>
+        <span *ngIf="loadingDemandes" class="text-xs text-slate-500 dark:text-slate-400">
+          Chargement...
+        </span>
+      </div>
+
+      <div class="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/80">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-100 text-slate-600 dark:bg-slate-900/90 dark:text-slate-400">
+          <tr>
+            <th class="px-4 py-3 text-left font-semibold">Date</th>
+            <th class="px-4 py-3 text-left font-semibold">Type</th>
+            <th class="px-4 py-3 text-left font-semibold">Statut</th>
+            <th class="px-4 py-3 text-left font-semibold">Priorite</th>
+            <th class="px-4 py-3 text-right font-semibold">Traitement</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr
+            *ngFor="let d of demandes"
+            class="border-t border-slate-200 hover:bg-slate-100 dark:border-slate-800/80 dark:hover:bg-slate-900/70"
+          >
+            <td class="px-4 py-3 font-mono text-slate-700 dark:text-slate-300">
+              {{ d.dateDemande | date:'dd/MM/yyyy HH:mm' }}
+              <div *ngIf="d.dateSouhaitee" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Planifiee: {{ d.dateSouhaitee | date:'dd/MM/yyyy HH:mm' }}
+              </div>
+              <div *ngIf="isDemandeLate(d)" class="mt-1 text-xs font-semibold text-red-600 dark:text-red-300">
+                {{ getRetardLabel(d) }}
+              </div>
+            </td>
+            <td class="px-4 py-3 text-slate-950 dark:text-white">
+              {{ d.typeMaintenance?.libelle || d.typeMaintenance?.code || '-' }}
+              <a
+                *ngIf="d.imagePath"
+                [href]="getDemandeImageUrl(d)"
+                target="_blank"
+                class="mt-2 block h-16 w-24 overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
+              >
+                <img [src]="getDemandeImageUrl(d)" alt="Photo demande" class="h-full w-full object-cover" />
+              </a>
+            </td>
+            <td class="px-4 py-3">
+              <span
+                class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold"
+                [ngClass]="getStatutBadgeClasses(d.statut)"
+              >
+                {{ getStatutLabel(d.statut) }}
+              </span>
+            </td>
+            <td class="px-4 py-3">
+              <span
+                class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold"
+                [ngClass]="getPrioriteBadgeClasses(d.priorite)"
+              >
+                {{ getPrioriteLabel(d.priorite) }}
+              </span>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex flex-wrap items-center justify-end gap-2">
+                <label *ngIf="d.statut === 'EN_ATTENTE'" class="block">
+                  <span class="mb-1 block text-xs font-semibold text-slate-500">Date planifiee</span>
+                  <input
+                  *ngIf="d.statut === 'EN_ATTENTE'"
+                  type="datetime-local"
+                  class="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900 focus:border-teal-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  [ngModel]="getDefaultPlanificationDate(d)"
+                  (ngModelChange)="planificationDates[d.id] = $event"
+                  />
+                </label>
+                <button
+                  *ngIf="auth.peutFaire('DEMANDE_PILOTER') && (d.statut === 'EN_ATTENTE')"
+                  type="button"
+                  class="rounded-md border border-sky-300 px-2.5 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-50 disabled:opacity-50 dark:border-sky-800 dark:text-sky-200 dark:hover:bg-sky-950/40"
+                  [disabled]="updatingDemandeId === d.id || !planificationDates[d.id]"
+                  (click)="planifierDemande(d)"
+                >
+                  Planifier
+                </button>
+                <button
+                  *ngIf="auth.peutFaire('DEMANDE_PILOTER') && (canMarkPendingDemande(d))"
+                  type="button"
+                  class="rounded-md border border-amber-300 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-50 disabled:opacity-50 dark:border-amber-900 dark:text-amber-200 dark:hover:bg-amber-950/40"
+                  [disabled]="updatingDemandeId === d.id"
+                  (click)="updateDemandeStatut(d, 'EN_ATTENTE')"
+                >
+                  En attente
+                </button>
+                <button
+                  *ngIf="auth.peutFaire('DEMANDE_PILOTER') && (canStartDemande(d))"
+                  type="button"
+                  class="rounded-md border border-emerald-300 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 dark:border-emerald-800 dark:text-emerald-200 dark:hover:bg-emerald-950/40"
+                  [disabled]="updatingDemandeId === d.id"
+                  (click)="updateDemandeStatut(d, 'EN_COURS')"
+                >
+                  Demarrer
+                </button>
+                <button
+                  *ngIf="auth.peutFaire('DEMANDE_PILOTER') && (canFinishDemande(d))"
+                  type="button"
+                  class="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                  [disabled]="updatingDemandeId === d.id"
+                  (click)="updateDemandeStatut(d, 'TERMINEE')"
+                >
+                  Terminer
+                </button>
+                <button
+                  *ngIf="auth.peutFaire('INTERVENTION_CREER') && (canFinishDemande(d))"
+                  type="button"
+                  class="rounded-md border border-slate-900 px-2.5 py-1 text-xs font-semibold text-slate-900 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-500 dark:text-slate-100"
+                  [disabled]="updatingDemandeId === d.id"
+                  (click)="openInterventionForDemande(d)"
+                >
+                  Intervention
+                </button>
+                <button
+                  *ngIf="auth.peutFaire('DEMANDE_PILOTER') && (d.statut === 'EN_ATTENTE_VALIDATION')"
+                  type="button"
+                  class="rounded-md border border-emerald-300 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 dark:border-emerald-800 dark:text-emerald-200 dark:hover:bg-emerald-950/40"
+                  [disabled]="updatingDemandeId === d.id"
+                  (click)="validerIntervention(d)"
+                >
+                  Valider
+                </button>
+                <button
+                  *ngIf="auth.peutFaire('DEMANDE_PILOTER') && (d.statut === 'EN_ATTENTE_VALIDATION')"
+                  type="button"
+                  class="rounded-md border border-amber-300 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-50 disabled:opacity-50 dark:border-amber-900 dark:text-amber-200 dark:hover:bg-amber-950/40"
+                  [disabled]="updatingDemandeId === d.id"
+                  (click)="refuserIntervention(d)"
+                >
+                  Refuser
+                </button>
+                <button
+                  *ngIf="auth.peutFaire('DEMANDE_PILOTER') && (canCancelDemande(d))"
+                  type="button"
+                  class="rounded-md border border-red-300 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-200 dark:hover:bg-red-950/40"
+                  [disabled]="updatingDemandeId === d.id"
+                  (click)="updateDemandeStatut(d, 'ANNULEE')"
+                >
+                  Annuler
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="demandes.length === 0 && !loadingDemandes">
+            <td colspan="5" class="px-4 py-4 text-center text-sm text-slate-500">
+              Aucune demande de maintenance pour cette machine sur cette periode.
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="surface-panel p-6">
+      <h3 class="text-lg font-semibold text-slate-950 dark:text-white">
+        Interventions et pieces utilisees
+      </h3>
+
+      <div class="mt-4 space-y-4">
+        <div *ngFor="let maintenance of maintenances" class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/80">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="font-semibold text-slate-950 dark:text-white">
+                {{ maintenance.type?.libelle || maintenance.type?.code || 'Intervention' }}
+              </p>
+              <p class="mt-1 text-xs text-slate-500">
+                {{ maintenance.dateDebut | date:'dd/MM/yyyy HH:mm' }} - {{ maintenance.typeIntervention || 'INTERNE' }}
+              </p>
+              <p class="mt-1 text-xs text-slate-500">
+                Cout total: {{ formatMoney(maintenance.cout) }} | Pieces: {{ formatMoney(maintenance.coutPieces) }}
+              </p>
+            </div>
+            <span class="font-mono text-xs text-slate-500">#{{ maintenance.id }}</span>
+          </div>
+
+          <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">{{ maintenance.description }}</p>
+
+          <div
+            *ngIf="maintenance.imagePath || maintenance.imageAvantPath || maintenance.imageApresPath"
+            class="mt-4 grid gap-3 md:grid-cols-3"
+          >
+            <a
+              *ngIf="maintenance.imageAvantPath"
+              [href]="getMaintenanceBeforeImageUrl(maintenance)"
+              target="_blank"
+              class="block overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+            >
+              <p class="border-b border-slate-100 px-3 py-2 text-xs font-semibold text-slate-500 dark:border-slate-800">Avant</p>
+              <img [src]="getMaintenanceBeforeImageUrl(maintenance)" alt="Photo avant intervention" class="h-36 w-full object-cover" />
+            </a>
+            <a
+              *ngIf="maintenance.imageApresPath"
+              [href]="getMaintenanceAfterImageUrl(maintenance)"
+              target="_blank"
+              class="block overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+            >
+              <p class="border-b border-slate-100 px-3 py-2 text-xs font-semibold text-slate-500 dark:border-slate-800">Apres</p>
+              <img [src]="getMaintenanceAfterImageUrl(maintenance)" alt="Photo apres intervention" class="h-36 w-full object-cover" />
+            </a>
+            <a
+              *ngIf="maintenance.imagePath && !maintenance.imageAvantPath && !maintenance.imageApresPath"
+              [href]="getMaintenanceImageUrl(maintenance)"
+              target="_blank"
+              class="block overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+            >
+              <p class="border-b border-slate-100 px-3 py-2 text-xs font-semibold text-slate-500 dark:border-slate-800">Photo</p>
+              <img [src]="getMaintenanceImageUrl(maintenance)" alt="Photo intervention" class="h-36 w-full object-cover" />
+            </a>
+          </div>
+
+          <div *ngIf="maintenance.pieces?.length > 0" class="mt-4 space-y-3">
+            <div *ngFor="let piece of maintenance.pieces" class="rounded-md border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-semibold text-slate-950 dark:text-white">
+                    {{ piece.piece?.reference }} - {{ piece.piece?.libelle }}
+                  </p>
+                  <p class="mt-1 text-xs text-slate-500">
+                    Sortie: {{ piece.quantite }} | Retournee: {{ piece.quantiteRetournee || 0 }} | Restante: {{ piece.quantiteDisponibleRetour || 0 }}
+                  </p>
+                  <p class="mt-1 text-xs text-slate-500">
+                    Prix moyen utilise: {{ formatMoney(piece.coutUnitaire) }} | Cout net: {{ formatMoney(piece.coutNet) }}
+                  </p>
+                  <p *ngIf="piece.causeRetour" class="mt-1 text-xs text-slate-500">
+                    Dernier retour: {{ piece.causeRetour }} - {{ piece.dateRetour | date:'dd/MM/yyyy HH:mm' }}
+                  </p>
+                </div>
+              </div>
+
+              <div *ngIf="(piece.quantiteDisponibleRetour || 0) > 0" class="mt-3 grid gap-2 md:grid-cols-[90px_minmax(0,1fr)_auto]">
+                <label class="block">
+                  <span class="mb-1 block text-xs font-semibold text-slate-500">Quantite retournee</span>
+                  <input
+                  type="number"
+                  min="1"
+                  [max]="piece.quantiteDisponibleRetour"
+                  class="form-control"
+                  [(ngModel)]="retourPieceForms[piece.id].quantite"
+                  />
+                </label>
+                <label class="block">
+                  <span class="mb-1 block text-xs font-semibold text-slate-500">Cause du retour</span>
+                  <input
+                  class="form-control"
+                  [(ngModel)]="retourPieceForms[piece.id].cause"
+                  placeholder="Ex: piece non utilisee, erreur de saisie..."
+                  />
+                </label>
+                <button *ngIf="auth.peutFaire('PIECE_GERER_STOCK')"
+                  type="button"
+                  class="secondary-action"
+                  [disabled]="returningPieceId === piece.id || !retourPieceForms[piece.id].cause"
+                  (click)="retournerPiece(piece)"
+                >
+                  Retour stock
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p *ngIf="!maintenance.pieces || maintenance.pieces.length === 0" class="mt-3 text-sm text-slate-500">
+            Aucune piece de stock utilisee dans cette intervention.
+          </p>
+        </div>
+
+        <p *ngIf="maintenances.length === 0" class="py-4 text-center text-sm text-slate-500">
+          Aucune intervention enregistree.
+        </p>
+      </div>
+    </section>
+
+    <section *ngIf="auth.peutFaire('INTERVENTION_CREER')" class="surface-panel p-6">
+      <h3 class="text-lg font-semibold text-slate-950 dark:text-white">
+        Demande intervention externe
+      </h3>
+      <p class="mt-1 text-sm text-slate-500">
+        Brouillon fournisseur prepare, non envoye.
+      </p>
+
+      <div class="mt-4 grid gap-3">
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Fournisseur / prestataire *</span>
+          <input class="form-control" [(ngModel)]="externalDraft.fournisseurNom" placeholder="Nom fournisseur" />
+        </label>
+        <div class="grid gap-3 md:grid-cols-2">
+          <label class="block">
+            <span class="mb-1 block text-sm font-medium text-slate-600">Personne a contacter</span>
+            <input class="form-control" [(ngModel)]="externalDraft.fournisseurContact" placeholder="Nom contact" />
+          </label>
+          <label class="block">
+            <span class="mb-1 block text-sm font-medium text-slate-600">Telephone</span>
+            <input class="form-control" [(ngModel)]="externalDraft.fournisseurTelephone" placeholder="+212..." />
+          </label>
+        </div>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Email</span>
+          <input class="form-control" [(ngModel)]="externalDraft.fournisseurEmail" placeholder="contact@fournisseur.com" />
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Adresse</span>
+          <input class="form-control" [(ngModel)]="externalDraft.fournisseurAdresse" placeholder="Adresse fournisseur" />
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Objet de la demande *</span>
+          <input class="form-control" [(ngModel)]="externalDraft.objet" placeholder="Ex: Intervention moteur principal" />
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Date souhaitee</span>
+          <input class="form-control" type="date" [(ngModel)]="externalDraft.dateSouhaitee" />
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-slate-600">Message technique</span>
+          <textarea class="form-control" rows="4" [(ngModel)]="externalDraft.description" placeholder="Besoin technique a envoyer plus tard..."></textarea>
+        </label>
+        <button type="button" class="primary-action" (click)="createExternalDraft()">
+          Preparer brouillon
+        </button>
+      </div>
+
+      <div class="mt-5 divide-y divide-slate-100 dark:divide-slate-800">
+        <div *ngFor="let d of demandesExternes" class="py-3">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="truncate text-sm font-semibold text-slate-950 dark:text-white">{{ d.objet }}</p>
+              <p class="mt-1 text-xs text-slate-500">{{ d.fournisseurNom }} - {{ d.fournisseurTelephone }}</p>
+              <p class="mt-1 text-xs text-slate-400">{{ d.dateCreation | date:'dd/MM/yyyy HH:mm' }}</p>
+            </div>
+            <span class="rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">
+              {{ d.statut }}
+            </span>
+          </div>
+        </div>
+        <p *ngIf="demandesExternes.length === 0" class="py-4 text-center text-sm text-slate-500">
+          Aucun brouillon externe.
+        </p>
+      </div>
+    </section>
+  </div>
+</div>

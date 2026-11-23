@@ -1,0 +1,158 @@
+<router-outlet *ngIf="estPageLogin"></router-outlet>
+
+<div *ngIf="!estPageLogin" class="min-h-screen bg-[#f4f7fb] text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+  <aside
+    class="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-slate-200 bg-white/95 dark:border-slate-800 dark:bg-slate-900 lg:flex lg:flex-col"
+  >
+    <div class="flex h-16 items-center gap-3 border-b border-slate-200 px-6 dark:border-slate-800">
+      <div class="flex h-9 w-9 items-center justify-center rounded-md bg-blue-700 text-sm font-bold text-white ring-2 ring-orange-300/70">
+        CM
+      </div>
+      <div>
+        <p class="text-sm font-semibold leading-none">CanalMaDash</p>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Maintenance industrielle</p>
+      </div>
+    </div>
+
+    <nav class="flex-1 space-y-1 px-4 py-5 text-sm">
+      <a
+        *ngIf="peutFaire('PAGE_DASHBOARD')"
+        routerLink="/dashboard"
+        routerLinkActive="bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-200"
+        class="flex items-center justify-between rounded-md px-3 py-2.5 font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-800 dark:text-slate-300 dark:hover:bg-slate-800"
+      >
+        <span class="flex items-center gap-3"><span class="app-icon app-icon-blue">D</span>Dashboard</span>
+        <span class="text-xs opacity-70">Stats</span>
+      </a>
+      <a
+        *ngIf="peutFaire('PAGE_MACHINES')"
+        routerLink="/machines"
+        routerLinkActive="bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-200"
+        class="flex items-center justify-between rounded-md px-3 py-2.5 font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-800 dark:text-slate-300 dark:hover:bg-slate-800"
+      >
+        <span class="flex items-center gap-3"><span class="app-icon app-icon-blue">M</span>Machines</span>
+        <span class="text-xs opacity-70">Machine List</span>
+      </a>
+      <a
+        *ngIf="peutFaire('PAGE_KANBAN')"
+        routerLink="/maintenance/kanban"
+        routerLinkActive="bg-orange-50 text-orange-800 dark:bg-orange-950/50 dark:text-orange-200"
+        class="flex items-center justify-between rounded-md px-3 py-2.5 font-medium text-slate-700 hover:bg-orange-50 hover:text-orange-800 dark:text-slate-300 dark:hover:bg-slate-800"
+      >
+        <span class="flex items-center gap-3"><span class="app-icon app-icon-orange">K</span>Kanban</span>
+        <span class="text-xs opacity-70">Demandes</span>
+      </a>
+      <a
+        *ngIf="peutFaire('PAGE_PIECES')"
+        routerLink="/maintenance/pieces"
+        routerLinkActive="bg-orange-50 text-orange-800 dark:bg-orange-950/50 dark:text-orange-200"
+        class="flex items-center justify-between rounded-md px-3 py-2.5 font-medium text-slate-700 hover:bg-orange-50 hover:text-orange-800 dark:text-slate-300 dark:hover:bg-slate-800"
+      >
+        <span class="flex items-center gap-3"><span class="app-icon app-icon-orange">P</span>Pieces</span>
+        <span class="text-xs opacity-70">Stock</span>
+      </a>
+      <a
+        *ngIf="peutFaire('PAGE_PARAM_TYPES')"
+        routerLink="/parametres/types"
+        routerLinkActive="bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-200"
+        class="flex items-center justify-between rounded-md px-3 py-2.5 font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-800 dark:text-slate-300 dark:hover:bg-slate-800"
+      >
+        <span class="flex items-center gap-3"><span class="app-icon app-icon-blue">S</span>Parametres</span>
+        <span class="text-xs opacity-70">Types</span>
+      </a>
+      <a
+        *ngIf="peutFaire('PAGE_PARAM_SCORE')"
+        routerLink="/parametres/score"
+        routerLinkActive="bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-200"
+        class="flex items-center justify-between rounded-md px-3 py-2.5 font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-800 dark:text-slate-300 dark:hover:bg-slate-800"
+      >
+        <span class="flex items-center gap-3"><span class="app-icon app-icon-blue">C</span>Score criticite</span>
+        <span class="text-xs opacity-70">Calcul</span>
+      </a>
+      <a
+        *ngIf="peutFaire('PAGE_PARAM_ROLES')"
+        routerLink="/parametres/roles"
+        routerLinkActive="bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-200"
+        class="flex items-center justify-between rounded-md px-3 py-2.5 font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-800 dark:text-slate-300 dark:hover:bg-slate-800"
+      >
+        <span class="flex items-center gap-3"><span class="app-icon app-icon-blue">R</span>Roles droits</span>
+        <span class="text-xs opacity-70">Acces</span>
+      </a>
+      <a
+        *ngIf="peutFaire('PAGE_AIDE')"
+        routerLink="/aide"
+        routerLinkActive="bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-200"
+        class="flex items-center justify-between rounded-md px-3 py-2.5 font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-800 dark:text-slate-300 dark:hover:bg-slate-800"
+      >
+        <span class="flex items-center gap-3"><span class="app-icon app-icon-blue">?</span>Aide application</span>
+        <span class="text-xs opacity-70">Guide</span>
+      </a>
+    </nav>
+
+    <div class="border-t border-slate-200 p-4 dark:border-slate-800">
+      <button
+        type="button"
+        (click)="toggleTheme()"
+        class="secondary-action w-full"
+      >
+        {{ isDarkMode ? 'Mode clair' : 'Mode sombre' }}
+      </button>
+    </div>
+  </aside>
+
+  <div class="lg:pl-72">
+    <header
+      class="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90"
+    >
+      <div class="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center gap-3 lg:hidden">
+          <div class="flex h-9 w-9 items-center justify-center rounded-md bg-blue-700 text-sm font-bold text-white ring-2 ring-orange-300/70">
+            CM
+          </div>
+          <div>
+            <p class="text-sm font-semibold leading-none">CanalMaDash</p>
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Maintenance</p>
+          </div>
+        </div>
+
+        <div class="hidden lg:block">
+          <p class="text-xs font-medium uppercase text-slate-500 dark:text-slate-400">
+            Supervision
+          </p>
+          <h1 class="text-lg font-semibold text-slate-950 dark:text-white">
+            Exploitation des donnees machines
+          </h1>
+        </div>
+
+        <div class="flex items-center gap-2 lg:hidden">
+          <a *ngIf="peutFaire('PAGE_DASHBOARD')" routerLink="/dashboard" class="rounded-md px-2.5 py-2 text-sm font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-800 dark:text-slate-200 dark:hover:bg-slate-800">Dashboard</a>
+          <a *ngIf="peutFaire('PAGE_MACHINES')" routerLink="/machines" class="rounded-md px-2.5 py-2 text-sm font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-800 dark:text-slate-200 dark:hover:bg-slate-800">Machines</a>
+          <a *ngIf="peutFaire('PAGE_KANBAN')" routerLink="/maintenance/kanban" class="rounded-md px-2.5 py-2 text-sm font-medium text-slate-700 hover:bg-orange-50 hover:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800">Kanban</a>
+          <a *ngIf="peutFaire('PAGE_PIECES')" routerLink="/maintenance/pieces" class="rounded-md px-2.5 py-2 text-sm font-medium text-slate-700 hover:bg-orange-50 hover:text-orange-800 dark:text-slate-200 dark:hover:bg-slate-800">Pieces</a>
+          <a *ngIf="peutFaire('PAGE_PARAM_SCORE')" routerLink="/parametres/score" class="rounded-md px-2.5 py-2 text-sm font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-800 dark:text-slate-200 dark:hover:bg-slate-800">Score</a>
+          <a *ngIf="peutFaire('PAGE_PARAM_ROLES')" routerLink="/parametres/roles" class="rounded-md px-2.5 py-2 text-sm font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-800 dark:text-slate-200 dark:hover:bg-slate-800">Roles</a>
+          <a *ngIf="peutFaire('PAGE_AIDE')" routerLink="/aide" class="rounded-md px-2.5 py-2 text-sm font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-800 dark:text-slate-200 dark:hover:bg-slate-800">Aide</a>
+        </div>
+
+        <button
+          type="button"
+          (click)="toggleTheme()"
+          class="secondary-action hidden sm:inline-flex"
+        >
+          {{ isDarkMode ? 'Mode clair' : 'Mode sombre' }}
+        </button>
+        <span *ngIf="utilisateur" class="hidden text-sm text-slate-600 dark:text-slate-300 sm:inline">
+          {{ utilisateur.nom }} · {{ utilisateur.role }}
+        </span>
+        <button type="button" (click)="deconnexion()" class="secondary-action">
+          Déconnexion
+        </button>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+  <app-global-ai-chat></app-global-ai-chat>
+</div>

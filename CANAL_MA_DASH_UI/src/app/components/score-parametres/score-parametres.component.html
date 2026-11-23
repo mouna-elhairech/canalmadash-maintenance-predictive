@@ -1,0 +1,205 @@
+<div class="space-y-6">
+  <div class="page-heading">
+    <div>
+      <p class="muted-label">Parametres maintenance</p>
+      <h2 class="page-title">Score criticite machine</h2>
+      <p class="page-subtitle">
+        Cette page explique et permet de modifier les parametres utilises par le backend pour calculer le score.
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <button type="button" class="secondary-action" (click)="resetDefaults()" [disabled]="saving">Valeurs par defaut</button>
+      <button type="button" class="primary-action" (click)="save()" [disabled]="saving || !parametres">
+        {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="message" class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+    {{ message }}
+  </div>
+  <div *ngIf="errorMessage" class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+    {{ errorMessage }}
+  </div>
+  <div *ngIf="loading" class="text-sm text-slate-500">Chargement des parametres...</div>
+
+  <section *ngIf="parametres" class="surface-panel p-6">
+    <div class="border-b border-blue-100 pb-4">
+      <h3 class="text-lg font-semibold text-slate-950">Modifier les points maximum</h3>
+      <p class="mt-1 text-sm text-slate-500">Ces valeurs definissent le poids de chaque critere. La somme peut etre differente de 100 si tu veux donner plus ou moins d importance au score.</p>
+    </div>
+    <div class="mt-4 grid gap-4 md:grid-cols-5">
+      <label class="block">
+        <span class="mb-1 block text-sm font-medium text-slate-600">Cout maintenance</span>
+        <input class="form-control" type="number" min="0" step="0.1" [(ngModel)]="parametres.poidsCoutMaintenance" />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-sm font-medium text-slate-600">Nombre de pannes</span>
+        <input class="form-control" type="number" min="0" step="0.1" [(ngModel)]="parametres.poidsNombrePannes" />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-sm font-medium text-slate-600">Temps d arret</span>
+        <input class="form-control" type="number" min="0" step="0.1" [(ngModel)]="parametres.poidsTempsArret" />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-sm font-medium text-slate-600">Disponibilite faible</span>
+        <input class="form-control" type="number" min="0" step="0.1" [(ngModel)]="parametres.poidsDisponibilite" />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-sm font-medium text-slate-600">Temps reparation</span>
+        <input class="form-control" type="number" min="0" step="0.1" [(ngModel)]="parametres.poidsTempsReparation" />
+      </label>
+    </div>
+  </section>
+
+  <section *ngIf="parametres" class="surface-panel p-6">
+    <div class="border-b border-orange-100 pb-4">
+      <h3 class="text-lg font-semibold text-slate-950">Modifier les facteurs par niveau</h3>
+      <p class="mt-1 text-sm text-slate-500">Le facteur indique quel pourcentage du poids maximum sera ajoute au score.</p>
+    </div>
+    <div class="mt-4 grid gap-4 md:grid-cols-3">
+      <label class="block">
+        <span class="mb-1 block text-sm font-medium text-slate-600">Surveillance (%)</span>
+        <input class="form-control" type="number" min="0" max="100" step="1" [(ngModel)]="parametres.facteurSurveillance" />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-sm font-medium text-slate-600">Attention (%)</span>
+        <input class="form-control" type="number" min="0" max="100" step="1" [(ngModel)]="parametres.facteurAttention" />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-sm font-medium text-slate-600">Critique (%)</span>
+        <input class="form-control" type="number" min="0" max="100" step="1" [(ngModel)]="parametres.facteurCritique" />
+      </label>
+    </div>
+  </section>
+
+  <section *ngIf="parametres" class="surface-panel p-6">
+    <div class="border-b border-blue-100 pb-4">
+      <h3 class="text-lg font-semibold text-slate-950">Modifier les seuils de lecture</h3>
+      <p class="mt-1 text-sm text-slate-500">Ces seuils transforment le score final en libelle Normal, A surveiller ou Critique.</p>
+    </div>
+    <div class="mt-4 grid gap-4 md:grid-cols-2">
+      <label class="block">
+        <span class="mb-1 block text-sm font-medium text-slate-600">Maximum Normal</span>
+        <input class="form-control" type="number" min="0" step="0.1" [(ngModel)]="parametres.seuilNormalMax" />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-sm font-medium text-slate-600">Maximum A surveiller</span>
+        <input class="form-control" type="number" min="0" step="0.1" [(ngModel)]="parametres.seuilSurveillanceMax" />
+      </label>
+    </div>
+  </section>
+
+  <section class="surface-panel p-6">
+    <div class="grid gap-4 md:grid-cols-4">
+      <div class="rounded-lg border border-blue-100 bg-blue-50 p-4 md:col-span-3">
+        <p class="text-sm font-semibold text-blue-900">Formule generale</p>
+        <p class="mt-2 font-mono text-sm text-blue-800">
+          Score = cout + pannes + temps arret + disponibilite + temps reparation
+        </p>
+        <p class="mt-3 text-sm leading-6 text-slate-600">
+          Chaque critere possede un poids maximum. Le niveau du critere determine le pourcentage de ce poids qui sera ajoute au score final.
+        </p>
+      </div>
+      <div class="rounded-lg border border-orange-100 bg-orange-50 p-4">
+        <p class="text-sm font-semibold text-orange-900">Score maximum</p>
+        <p class="mt-2 text-4xl font-bold text-orange-700">
+          {{ weights[0].max + weights[1].max + weights[2].max + weights[3].max + weights[4].max }}
+        </p>
+        <p class="mt-2 text-xs text-orange-700">Somme actuelle des points maximum configures.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid gap-6 xl:grid-cols-2">
+    <section class="surface-panel overflow-hidden">
+      <div class="border-b border-blue-100 px-6 py-4">
+        <h3 class="text-lg font-semibold text-slate-950">Poids des criteres</h3>
+        <p class="mt-1 text-sm text-slate-500">Ces valeurs indiquent l importance de chaque critere dans le score final.</p>
+      </div>
+      <div class="divide-y divide-blue-50">
+        <div *ngFor="let item of weights" class="grid gap-3 px-6 py-4 md:grid-cols-[1fr_90px]">
+          <div>
+            <p class="font-semibold text-slate-950">{{ item.label }}</p>
+            <p class="mt-1 text-sm text-slate-500">{{ item.description }}</p>
+          </div>
+          <div class="rounded-md bg-blue-50 px-3 py-2 text-center">
+            <p class="text-xs font-semibold text-blue-600">Maximum</p>
+            <p class="text-xl font-bold text-blue-800">{{ item.max }}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="surface-panel overflow-hidden">
+      <div class="border-b border-orange-100 px-6 py-4">
+        <h3 class="text-lg font-semibold text-slate-950">Niveaux appliques</h3>
+        <p class="mt-1 text-sm text-slate-500">Le niveau transforme le poids maximum en points reellement ajoutes.</p>
+      </div>
+      <div class="divide-y divide-orange-50">
+        <div *ngFor="let level of levels" class="grid gap-3 px-6 py-4 md:grid-cols-[1fr_90px]">
+          <div>
+            <p class="font-semibold text-slate-950">{{ level.label }}</p>
+            <p class="mt-1 text-sm text-slate-500">{{ level.description }}</p>
+          </div>
+          <div class="rounded-md bg-orange-50 px-3 py-2 text-center">
+            <p class="text-xs font-semibold text-orange-600">Facteur</p>
+            <p class="text-xl font-bold text-orange-700">{{ level.factor }}%</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="surface-panel overflow-hidden">
+    <div class="border-b border-blue-100 px-6 py-4">
+      <h3 class="text-lg font-semibold text-slate-950">Exemple de calcul</h3>
+      <p class="mt-1 text-sm text-slate-500">Exemple d une machine avec plusieurs signaux de risque.</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-blue-50 text-left text-xs font-semibold uppercase text-blue-700">
+        <tr>
+          <th class="px-5 py-3">Critere</th>
+          <th class="px-5 py-3">Poids max</th>
+          <th class="px-5 py-3">Niveau</th>
+          <th class="px-5 py-3">Facteur</th>
+          <th class="px-5 py-3 text-right">Points</th>
+        </tr>
+        </thead>
+        <tbody class="divide-y divide-blue-50">
+        <tr *ngFor="let row of exampleRows">
+          <td class="px-5 py-3 font-semibold text-slate-950">{{ row.label }}</td>
+          <td class="px-5 py-3 font-mono">{{ row.max }}</td>
+          <td class="px-5 py-3">{{ row.level }}</td>
+          <td class="px-5 py-3 font-mono">{{ row.factor }}%</td>
+          <td class="px-5 py-3 text-right font-mono font-semibold">{{ row.value }}</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="border-t border-blue-100 bg-orange-50 px-6 py-4">
+      <p class="text-sm font-semibold text-orange-800">
+        Score final exemple : {{ totalExample | number:'1.0-1' }} points. Le resultat depend des seuils configures ci-dessus.
+      </p>
+    </div>
+  </section>
+
+  <section class="surface-panel p-6">
+    <h3 class="text-lg font-semibold text-slate-950">Lecture du resultat</h3>
+    <div class="mt-4 grid gap-3 md:grid-cols-3">
+      <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+        <p class="font-semibold text-emerald-700">0 a {{ parametres?.seuilNormalMax || 39 }} : Normal</p>
+        <p class="mt-2 text-sm text-slate-600">La machine ne presente pas de risque important selon les donnees disponibles.</p>
+      </div>
+      <div class="rounded-lg border border-orange-200 bg-orange-50 p-4">
+        <p class="font-semibold text-orange-700">{{ (parametres?.seuilNormalMax || 39) + 1 }} a {{ parametres?.seuilSurveillanceMax || 69 }} : A surveiller</p>
+        <p class="mt-2 text-sm text-slate-600">La machine doit etre suivie plus attentivement, surtout sur les criteres qui ont ajoute des points.</p>
+      </div>
+      <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+        <p class="font-semibold text-red-700">Plus de {{ parametres?.seuilSurveillanceMax || 69 }} : Critique</p>
+        <p class="mt-2 text-sm text-slate-600">La machine peut necessiter une action prioritaire, une analyse de cause ou une etude de remplacement.</p>
+      </div>
+    </div>
+  </section>
+</div>
