@@ -1,5 +1,5 @@
 -- Table des utilisateurs (authentification JWT + BCrypt).
--- A executer une seule fois sur la base CanalMaDashDB, apres la table role_application.
+-- Optionnel : Hibernate cree deja cette table au demarrage du backend (ddl-auto=update). Script fourni pour reference.
 
 CREATE TABLE IF NOT EXISTS utilisateur (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -18,10 +18,5 @@ CREATE TABLE IF NOT EXISTS utilisateur (
 --      INSERT INTO utilisateur (nom, email, mot_de_passe_hash, role_id)
 --      VALUES ('Nom Prenom', 'email@exemple.ma', '<HASH_BCRYPT>', 1);
 --
--- role_id (table role_application) :
---   1 = ADMIN                    : tous les droits
---   2 = RESPONSABLE_MAINTENANCE  : tout, sauf la gestion des roles
---   3 = TECHNICIEN_MAINTENANCE   : lecture, creation et modification (pas de suppression ni de parametres)
---   4 = OPERATEUR                : idem technicien
---   5 = MAGASINIER               : idem technicien
---   6 = CONSULTATION             : lecture seule
+-- role_id (table role_application, creee au demarrage) : 1 ADMIN, 2 RESPONSABLE_MAINTENANCE, 3 TECHNICIEN_MAINTENANCE, 4 OPERATEUR, 5 MAGASINIER, 6 CONSULTATION.
+-- Les droits de chaque role (pages et actions) sont dans fonctionnalite_application et role_application_fonctionnalite.
