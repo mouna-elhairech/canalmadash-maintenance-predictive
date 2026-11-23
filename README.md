@@ -11,7 +11,7 @@ Web platform for industrial maintenance management (machines, maintenance reques
 - Machine fleet supervision: live status, time spent in the current state, history
 - Maintenance requests with a Kanban board, interventions, preventive controls
 - Spare-parts stock with alerts and movements
-- Dashboard: availability, MTBF, MTTR, costs, replacement analysis, PDF and Excel exports
+- Dashboard: availability, MTBF, MTTR, costs, replacement analysis, PDF and CSV exports
 - Local AI assistant (Ollama) for diagnostics and a chatbot
 - **Breakdown-risk prediction (7 days)** with explanation of the main factors (SHAP)
 - **Authentication and permissions per role** (JWT + BCrypt)

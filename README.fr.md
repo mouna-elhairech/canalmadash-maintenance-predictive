@@ -11,7 +11,7 @@ Plateforme web de gestion de la maintenance industrielle (machines, demandes de 
 - Supervision du parc de machines : état en direct, temps passé dans l'état actuel, historique
 - Demandes de maintenance avec tableau Kanban, interventions, contrôles périodiques
 - Stock de pièces de rechange avec alertes et mouvements
-- Tableau de bord : disponibilité, MTBF, MTTR, coûts, analyse de remplacement, exports PDF et Excel
+- Tableau de bord : disponibilité, MTBF, MTTR, coûts, analyse de remplacement, exports PDF et CSV
 - Assistant IA local (Ollama) pour le diagnostic et un chatbot
 - **Prédiction du risque de panne (7 jours)** avec explication des facteurs principaux (SHAP)
 - **Authentification et droits par rôle** (JWT + BCrypt)
